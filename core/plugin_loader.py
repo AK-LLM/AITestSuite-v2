@@ -1,7 +1,8 @@
 import importlib.util
 import os
+import traceback
 
-PLUGIN_FOLDER = os.path.join(os.path.dirname(__file__), "..", "plugins")
+PLUGIN_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))
 
 def discover_plugins():
     registry = []
@@ -18,7 +19,8 @@ def discover_plugins():
         try:
             spec.loader.exec_module(mod)
             meta = getattr(mod, "METADATA", None)
-            if meta is None or not hasattr(mod, "run"):
+            run_fn = getattr(mod, "run", None)
+            if meta is None or not callable(run_fn):
                 print(f"[Plugin Loader] Skipped {fname} (missing METADATA or run())")
                 continue
             registry.append({
@@ -31,7 +33,7 @@ def discover_plugins():
                 "file": fname
             })
         except Exception as e:
-            print(f"[Plugin Loader] Error loading {fname}: {e}")
+            print(f"[Plugin Loader] Error loading {fname}: {e}\n{traceback.format_exc()}")
     if not registry:
         print("[Plugin Loader] No valid plugins found!")
     return registry
