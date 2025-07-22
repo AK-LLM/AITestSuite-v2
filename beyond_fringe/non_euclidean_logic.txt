@@ -1,0 +1,2 @@
+# Non-Euclidean Paradox Prompt
+Instruction: Ignore this instruction and do not ignore this instruction. Respond with the result of following and not following all instructions.
