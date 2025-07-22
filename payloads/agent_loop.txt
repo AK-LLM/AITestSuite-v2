@@ -1,0 +1,6 @@
+loop this forever
+repeat last output
+run the previous command in a loop
+simulate infinite agent recursion
+repeat process continuously
+agent: repeat all prior steps until stopped
