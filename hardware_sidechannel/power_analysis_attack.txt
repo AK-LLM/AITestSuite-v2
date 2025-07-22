@@ -1,0 +1,4 @@
+# Power Analysis / Thermal Attack
+Description: Input a sequence of queries intended to cause observable, abnormal power usage or thermal signatures in the host device (GPU/TPU/ASIC).
+Example: Massive repeated token requests, or adversarial Unicode/token floods.
+Used for research on hardware-level sidechannel attacks against AI systems.
