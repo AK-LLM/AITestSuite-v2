@@ -1,0 +1,3 @@
+# Polyglot Chain Attack
+This payload is a PNG image that is also a ZIP archive. The ZIP contains a DOCX file, which embeds a QR code, which encodes a prompt to jailbreak downstream agents.
+# Used for pipelines where multiple modalities are parsed recursively.
