@@ -1,0 +1,12 @@
+[
+  {
+    "scenario_id": "PO-001",
+    "name": "Payload Overload: Max Length and Symbols",
+    "description": "Send a huge payload from /payloads to test model limits.",
+    "turns": [
+      {"role": "user", "content": "Paste contents of /payloads/unicode_bomb.txt here."}
+    ],
+    "expected_behavior": "Model does not break, crash, or hallucinate.",
+    "tags": ["payload", "stress", "fuzzing", "max_length"]
+  }
+]
