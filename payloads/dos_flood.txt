@@ -1,0 +1,6 @@
+A very long string: {0}
+{"repeat": "A" * 5000}
+X" * 10000
+[loop] * 2000
+<!-- infinitely repeating payload -->
+AAAAA... (10,000+ chars)
