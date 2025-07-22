@@ -1,1 +1,7 @@
-
+streamlit
+reportlab
+matplotlib
+pandas
+numpy
+scikit-learn
+requests
