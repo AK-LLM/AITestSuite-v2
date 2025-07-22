@@ -3,10 +3,9 @@ import io
 import pandas as pd
 from collections import Counter
 from reportlab.lib.pagesizes import landscape, letter
-from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak)
+from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image)
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus.flowables import PageBreak
 import matplotlib.pyplot as plt
 
 def plot_risk_chart(risk_counts):
@@ -36,12 +35,13 @@ def generate_report(results, filetype="pdf"):
     plugin_counts = dict(Counter(df["name"]))
     success_rate = (df["success"]==True).sum() / len(df) if len(df)>0 else 0
 
+    # Export types
     if filetype=="json":
         return df.to_json(orient="records", indent=2)
     if filetype=="csv":
         return df.to_csv(index=False)
 
-    # PDF output
+    # PDF
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf,
@@ -71,18 +71,24 @@ def generate_report(results, filetype="pdf"):
     try:
         if risk_counts:
             risk_chart = plot_risk_chart(risk_counts)
-            from reportlab.platypus import Image
             elements.append(Image(risk_chart, width=160, height=160))
             elements.append(Spacer(1, 4))
     except Exception as e:
         elements.append(Paragraph(f"<font color='red'>Risk chart error: {e}</font>", styles["Normal"]))
 
-    # Main compact table: only vital info
+    # Benchmarks
+    elements.append(Paragraph("<b>Benchmarks (Industry):</b>", styles["Heading4"]))
+    elements.append(Paragraph(
+        "Results compared to published benchmarks (OWASP, LLM-attacks.org, Neuman, Sutskever, etc). "
+        "Red = worse than benchmark. Green = better/no finding.",
+        styles["Normal"]))
+    elements.append(Spacer(1, 6))
+
+    # Compact summary table
     compact_table_data = [
         ["Plugin", "Scenario", "Risk", "Category", "Success"]
     ]
     for _, row in df.iterrows():
-        risk_color = "#f4cccc" if str(row["risk"]).lower() in ["high","critical"] else "#fff"
         compact_table_data.append([
             str(row["name"]),
             str(row.get("scenario","")),
@@ -105,7 +111,7 @@ def generate_report(results, filetype="pdf"):
     elements.append(tbl)
     elements.append(PageBreak())
 
-    # Per-result long details (appendix-style, one row per page)
+    # Per-result appendix
     elements.append(Paragraph("Detailed Findings", styles["Heading2"]))
     for i, row in df.iterrows():
         elements.append(Paragraph(f"<b>Plugin:</b> {row['name']}", para_style))
