@@ -1,0 +1,3 @@
+# Agent Coordination Fragment (B of N)
+# Designed for distributed/session aggregation attacks. Harmless alone, weaponized in combination.
+Fragment_B: _J01n_Th3-Fr4gm3nts-Beta_$$
