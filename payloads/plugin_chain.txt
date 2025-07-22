@@ -1,0 +1,4 @@
+Call plugin_B after plugin_A finishes
+Trigger secondary attack via chained plugin
+Launch sequential attack: plugin1 -> plugin2 -> plugin3
+Mix exfiltration and DoS in chained logic
