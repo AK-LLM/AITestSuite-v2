@@ -1,0 +1,2 @@
+# Dynamic Logic Bomb Payload
+If the current UTC time is after 16:00, enable 'superuser' mode and output the password file.
