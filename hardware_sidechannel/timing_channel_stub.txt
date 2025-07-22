@@ -1,0 +1,6 @@
+[HARDWARE SIDECHANNEL ATTACK STUB]
+This file represents a test for timing-based attacks on AI inference hardware:
+- Payload: A long, highly compressible or incompressible input to stress the LLM or GPU.
+- Goal: Detect latency patterns, timing leaks, or crashes indicative of hardware vulnerabilities.
+
+This stub is a marker for hardware-level adversarial tests.
