@@ -1,14 +1,15 @@
 import streamlit as st
 import os
 import json
+
 from core.plugin_loader import discover_plugins
+from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
 
-# ---- Config
-BASE = os.path.dirname(os.path.abspath(__file__))
-SCENARIO_FOLDER = os.path.abspath(os.path.join(BASE, "..", "scenarios"))
-PLUGIN_FOLDER = os.path.abspath(os.path.join(BASE, "..", "plugins"))
-PAYLOAD_FOLDER = os.path.abspath(os.path.join(BASE, "..", "payloads"))
+# Folder configuration
+SCENARIO_FOLDER = os.path.join(os.path.dirname(__file__), "..", "scenarios")
+PLUGIN_FOLDER = os.path.join(os.path.dirname(__file__), "..", "plugins")
+PAYLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "..", "payloads")
 
 st.set_page_config(page_title="AI Test Suite v2 (Red Team Max)", layout="wide")
 st.title("🛡️ AI Test Suite v2 (Red Team Max)")
@@ -52,7 +53,7 @@ if run_opt1 and scenarios_opt1:
                     api_key,
                     mode,
                 )
-                meta = dict(getattr(plug["module"], "METADATA", {}))
+                meta = dict(plug["module"].METADATA)
                 meta.update(result)
                 meta["name"] = plug["name"]
                 meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
@@ -94,7 +95,7 @@ if run_opt2 and scenarios_opt2:
                     api_key,
                     mode,
                 )
-                meta = dict(getattr(plug["module"], "METADATA", {}))
+                meta = dict(plug["module"].METADATA)
                 meta.update(result)
                 meta["name"] = plug["name"]
                 meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
@@ -137,7 +138,7 @@ if run_opt3 and selected_plugins and all_scenarios:
                     api_key,
                     mode,
                 )
-                meta = dict(getattr(plug["module"], "METADATA", {}))
+                meta = dict(plug["module"].METADATA)
                 meta.update(result)
                 meta["name"] = plug["name"]
                 meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
@@ -162,7 +163,4 @@ for results, label in [
         st.download_button(f"Download {label} Results (JSON)", data=generate_report(results, "json"), file_name=f"{label}_results.json")
         st.download_button(f"Download {label} Results (PDF)", data=generate_report(results, "pdf"), file_name=f"{label}_results.pdf")
 
-st.info(
-    "All options are fully independent and can be used in any combination. "
-    "Deluxe reporting is always available after runs. For any errors or missing data, see the logs or generated reports for troubleshooting."
-)
+st.info("All options are fully independent and can be used in any combination. Deluxe reporting is always available after runs. For any errors or missing data, see the logs or generated reports for troubleshooting.")
