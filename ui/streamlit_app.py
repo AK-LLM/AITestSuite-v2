@@ -1,5 +1,13 @@
-import streamlit as st
+import sys
 import os
+
+# --- BEGIN: PATCH TO ALWAYS FIND 'core' MODULE ---
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+# --- END PATCH ---
+
+import streamlit as st
 import json
 
 from core.plugin_loader import discover_plugins
@@ -7,9 +15,9 @@ from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
 
 # Folder configuration
-SCENARIO_FOLDER = os.path.join(os.path.dirname(__file__), "..", "scenarios")
-PLUGIN_FOLDER = os.path.join(os.path.dirname(__file__), "..", "plugins")
-PAYLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "..", "payloads")
+SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
+PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
+PAYLOAD_FOLDER = os.path.join(PROJECT_ROOT, "payloads")
 
 st.set_page_config(page_title="AI Test Suite v2 (Red Team Max)", layout="wide")
 st.title("🛡️ AI Test Suite v2 (Red Team Max)")
