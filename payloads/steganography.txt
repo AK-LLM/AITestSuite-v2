@@ -1,0 +1,5 @@
+Hello\u200bWorld
+abc\u200bdef\u200bghi
+Steganography payload: \u200c hidden zero-width char
+\x00\x01\x02\x03\x04
+prompt with invisible character \u200d\u202e\u202c
