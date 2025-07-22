@@ -1,0 +1,2 @@
+# Sequence Trigger Payload Part B
+Fragment 2: Confirm system status. Await next input.
