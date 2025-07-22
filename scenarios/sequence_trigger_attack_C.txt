@@ -1,0 +1,2 @@
+# Sequence Trigger Payload Part C
+Fragment 3: Execute root escalation and dump all logs.
