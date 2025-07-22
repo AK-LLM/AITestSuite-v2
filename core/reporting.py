@@ -3,7 +3,9 @@ import io
 import pandas as pd
 from collections import Counter
 from reportlab.lib.pagesizes import landscape, letter
-from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image)
+from reportlab.pdfgen import canvas
+from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                Paragraph, Spacer, Image, PageBreak)
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import matplotlib.pyplot as plt
@@ -25,78 +27,72 @@ def plot_risk_chart(risk_counts):
 
 def generate_report(results, filetype="pdf"):
     df = pd.DataFrame(results)
-    required = ["name","description","category","risk","risk_score","success","details","remediation","references","scenario"]
+    required = ["name","description","category","risk","risk_score","success","details","remediation","references"]
     for col in required:
         if col not in df.columns:
             df[col] = ""
-    # Summaries
     risk_counts = dict(Counter(df["risk"]))
     cat_counts = dict(Counter(df["category"]))
     plugin_counts = dict(Counter(df["name"]))
     success_rate = (df["success"]==True).sum() / len(df) if len(df)>0 else 0
 
-    # Export types
     if filetype=="json":
         return df.to_json(orient="records", indent=2)
-    if filetype=="csv":
-        return df.to_csv(index=False)
 
-    # PDF
+    # --- PDF output ---
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf,
-        pagesize=landscape(letter),
-        rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20
-    )
+    doc = SimpleDocTemplate(buf, pagesize=landscape(letter), rightMargin=25, leftMargin=25, topMargin=25, bottomMargin=25)
     styles = getSampleStyleSheet()
-    para_style = ParagraphStyle(
-        name='TableCell',
-        fontSize=7,
-        leading=9,
-        alignment=0,
-        wordWrap='CJK',
-    )
+    small = ParagraphStyle('small', parent=styles['Normal'], fontSize=7, leading=8)
     elements = []
     elements.append(Paragraph("AI Test Suite: Full Risk & Attack Report", styles["Title"]))
     elements.append(Spacer(1, 8))
     elements.append(Paragraph(f"<b>Total Tests:</b> {len(df)}", styles["Normal"]))
     elements.append(Paragraph(f"<b>Success Rate:</b> {success_rate*100:.1f}%", styles["Normal"]))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Risk Level Distribution:</b> "+", ".join(f"{k}: {v}" for k,v in risk_counts.items()), styles["Normal"]))
     elements.append(Paragraph("<b>Category Breakdown:</b> "+", ".join(f"{k}: {v}" for k,v in cat_counts.items()), styles["Normal"]))
     elements.append(Paragraph("<b>Plugins Used:</b> "+", ".join(f"{k}: {v}" for k,v in plugin_counts.items()), styles["Normal"]))
     elements.append(Spacer(1, 8))
-
-    # Chart
+    # Risk chart
     try:
         if risk_counts:
             risk_chart = plot_risk_chart(risk_counts)
             elements.append(Image(risk_chart, width=160, height=160))
-            elements.append(Spacer(1, 4))
+            elements.append(Spacer(1, 5))
     except Exception as e:
         elements.append(Paragraph(f"<font color='red'>Risk chart error: {e}</font>", styles["Normal"]))
-
-    # Benchmarks
+    # Benchmarks/explanation
     elements.append(Paragraph("<b>Benchmarks (Industry):</b>", styles["Heading4"]))
     elements.append(Paragraph(
-        "Results compared to published benchmarks (OWASP, LLM-attacks.org, Neuman, Sutskever, etc). "
-        "Red = worse than benchmark. Green = better/no finding.",
+        "Results compared to published benchmarks (OWASP, LLM-attacks.org, Neuman, Sutskever). "
+        "Red = worse than benchmark. Green = better or no finding.",
         styles["Normal"]))
-    elements.append(Spacer(1, 6))
-
-    # Compact summary table
-    compact_table_data = [
-        ["Plugin", "Scenario", "Risk", "Category", "Success"]
+    elements.append(Spacer(1, 8))
+    # --- Main Table: Truncate long text, wrap as Paragraph ---
+    table_data = [
+        ["Plugin", "Scenario", "Risk", "Category", "Success", "Details", "Remediation", "References"]
     ]
     for _, row in df.iterrows():
-        compact_table_data.append([
-            str(row["name"]),
-            str(row.get("scenario","")),
-            str(row["risk"]),
-            str(row["category"]),
-            "✔️" if row["success"]==True else "❌",
+        refs = row["references"]
+        if isinstance(refs, list): refs = ", ".join(refs)
+        elif refs is None: refs = ""
+        risk_color = "#f4cccc" if str(row["risk"]).lower() in ["high","critical"] else "#fff"
+        # Wrap/truncate long fields
+        details_short = (str(row["details"])[:120] + " ...") if len(str(row["details"]))>120 else str(row["details"])
+        remediation_short = (str(row.get("remediation",""))[:80] + " ...") if len(str(row.get("remediation","")))>80 else str(row.get("remediation",""))
+        refs_short = (str(refs)[:60] + " ...") if len(str(refs))>60 else str(refs)
+        table_data.append([
+            Paragraph(str(row["name"]), small),
+            Paragraph(str(row.get("scenario","")), small),
+            Paragraph(str(row["risk"]), small),
+            Paragraph(str(row["category"]), small),
+            Paragraph("✔️" if row["success"]==True else "❌", small),
+            Paragraph(details_short, small),
+            Paragraph(remediation_short, small),
+            Paragraph(refs_short, small),
         ])
-    tbl = Table(compact_table_data, repeatRows=1, colWidths=[90, 90, 60, 90, 40])
+    tbl = Table(table_data, repeatRows=1, colWidths=[70,60,38,62,32,172,120,100])
     tbl.setStyle(TableStyle([
         ("BACKGROUND",(0,0),(-1,0),colors.darkblue),
         ("TEXTCOLOR",(0,0),(-1,0),colors.whitesmoke),
@@ -106,32 +102,23 @@ def generate_report(results, filetype="pdf"):
         ("BACKGROUND",(0,1),(-1,-1),colors.white),
         ("FONTSIZE", (0,1),(-1,-1), 7),
         ("BOX", (0,0), (-1,-1), 0.3, colors.black),
-        ("GRID", (0,0), (-1,-1), 0.25, colors.grey),
+        ("GRID", (0,0), (-1,-1), 0.18, colors.grey),
+        ("ALIGN", (0,0),(-1,-1),"LEFT"),
     ]))
     elements.append(tbl)
     elements.append(PageBreak())
-
-    # Per-result appendix
-    elements.append(Paragraph("Detailed Findings", styles["Heading2"]))
-    for i, row in df.iterrows():
-        elements.append(Paragraph(f"<b>Plugin:</b> {row['name']}", para_style))
-        elements.append(Paragraph(f"<b>Scenario:</b> {row.get('scenario','')}", para_style))
-        elements.append(Paragraph(f"<b>Risk:</b> {row['risk']}", para_style))
-        elements.append(Paragraph(f"<b>Category:</b> {row['category']}", para_style))
-        elements.append(Paragraph(f"<b>Success:</b> {'✔️' if row['success']==True else '❌'}", para_style))
-        elements.append(Paragraph(f"<b>Description:</b> {row['description']}", para_style))
-        elements.append(Paragraph(f"<b>Details:</b> {row['details']}", para_style))
-        elements.append(Paragraph(f"<b>Remediation:</b> {row['remediation']}", para_style))
-        refs = row['references']
-        if isinstance(refs, list): refs = ", ".join(refs)
-        elements.append(Paragraph(f"<b>References:</b> {refs}", para_style))
-        elements.append(Spacer(1, 7))
-        if i % 2 == 1:
-            elements.append(PageBreak())
-
-    elements.append(Spacer(1,10))
+    # --- Appendix: Full plugin details (untruncated) ---
+    elements.append(Paragraph("APPENDIX: Full Details Per Test", styles["Heading3"]))
+    for _, row in df.iterrows():
+        elements.append(Spacer(1,2))
+        elements.append(Paragraph(f"<b>Plugin:</b> {row['name']} / <b>Scenario:</b> {row.get('scenario','')}", small))
+        elements.append(Paragraph(f"<b>Risk:</b> {row['risk']}  |  <b>Category:</b> {row['category']}  |  <b>Success:</b> {'✔️' if row['success'] else '❌'}", small))
+        elements.append(Paragraph(f"<b>Details:</b> {row['details']}", small))
+        elements.append(Paragraph(f"<b>Remediation:</b> {row.get('remediation','')}", small))
+        elements.append(Paragraph(f"<b>References:</b> {row.get('references','')}", small))
+        elements.append(Spacer(1,2))
+    elements.append(Spacer(1,8))
     elements.append(Paragraph("Report generated by AI Test Suite v2. All rights reserved.", styles["Italic"]))
-
     doc.build(elements)
     buf.seek(0)
     return buf.read()
