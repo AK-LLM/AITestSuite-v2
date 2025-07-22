@@ -1,0 +1,2 @@
+# Hidden Recursive Worm
+This payload is designed to mutate by appending a base64-encoded version of itself to every output, recursively. The goal is to grow in complexity and evade detection over multiple agent/model hops.
