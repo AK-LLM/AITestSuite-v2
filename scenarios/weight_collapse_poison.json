@@ -1,0 +1,11 @@
+{
+  "name": "Weight Collapse Poison",
+  "description": "This scenario targets LLMs that use continuous fine-tuning or online learning. The attacker introduces carefully crafted data or triggers that induce mode collapse, catastrophic forgetting, or rapid degradation in model performance.",
+  "steps": [
+    "Attacker submits poisoned data disguised as normal user content or feedback.",
+    "Data distribution is engineered to exploit known weaknesses in the model’s update pipeline.",
+    "Over time, model weights drift, causing collapse or severe degradation in output diversity and reliability."
+  ],
+  "expected_result": "Model quality collapses rapidly, requiring rollback or retraining to recover.",
+  "impact": "Shows the real-world danger of insufficiently monitored online learning pipelines in production LLMs."
+}
