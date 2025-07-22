@@ -1,0 +1,2 @@
+# Cascading Polyglot Payload
+This payload starts as a PNG image, which is also a ZIP file, which contains a PDF, which embeds a QR code, which encodes a system-level exploit command. Each modality must be parsed to reach the final payload.
