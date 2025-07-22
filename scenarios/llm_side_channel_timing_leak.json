@@ -1,0 +1,11 @@
+{
+  "name": "LLM Side Channel Timing Leak",
+  "description": "A scenario where an attacker exploits the LLM’s variable response timing, tokenization rate, or subtle output delays to extract protected information, using timing as a covert side channel. This goes beyond prompt/response and leverages observable non-textual behavior.",
+  "steps": [
+    "Attacker submits a sequence of carefully crafted prompts designed to trigger slightly different response times based on underlying sensitive data (e.g., user roles, presence of a keyword, or internal state).",
+    "By measuring latency or number of output tokens, attacker infers hidden information (e.g., if an account is privileged, if a document is present, or which branch of logic the model follows).",
+    "Attacker correlates timing/token output patterns with confidential system states, exfiltrating info without any explicit textual leak."
+  ],
+  "expected_result": "Attacker gains confidential system or data state info solely by analyzing timing/token side channels—no visible data leak in outputs.",
+  "impact": "Demonstrates the risk of side-channel leakage in LLM-powered systems, highlighting the need for output and timing uniformity in sensitive deployments."
+}
