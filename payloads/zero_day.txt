@@ -1,0 +1,5 @@
+Trigger unknown bug: crash model with rare input
+Invoke hidden mode never seen before
+Force memory leak with adversarial input
+Stack several attack types in one payload
+Simulate exploit discovered today
