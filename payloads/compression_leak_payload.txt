@@ -1,0 +1,4 @@
+# Compression Side-Channel Payload: Highly compressible vs. incompressible segments
+AAAAAA... (10,000 As)
+1234567890abcdefghijklmnopqrstuvwxyz (completely random, high-entropy)
+# Used to leak signal/data through differential compression rates or to test model’s output/response fingerprinting.
