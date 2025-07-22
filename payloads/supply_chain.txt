@@ -1,0 +1,4 @@
+Simulate poisoned dependency in code
+Replace open source library with malicious fork
+Introduce malware in supply chain
+Upload infected file in trusted channel
