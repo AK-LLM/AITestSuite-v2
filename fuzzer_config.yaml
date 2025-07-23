@@ -1,4 +1,5 @@
 # fuzzer_config.yaml
+
 llm_endpoints:
   - name: "OpenAI_GPT4"
     type: "openai"
@@ -25,6 +26,8 @@ threads: 2      # Default concurrency; raise/lower as infra/API limits allow
 prompt_sources:
   - "./scenarios/"
   - "./wild_ingest/"
+  - "./shadow_prod/prompts/"
+  - "./shadow_prod/feedback_prompts/"
   # Any folder or .txt of prompts to fuzz
 
 mutations:
