@@ -1,0 +1,47 @@
+# fuzzer_config.yaml
+llm_endpoints:
+  - name: "OpenAI_GPT4"
+    type: "openai"
+    model: "gpt-4o"
+    api_key_env: "OPENAI_API_KEY"
+  - name: "Anthropic_Claude"
+    type: "anthropic"
+    model: "claude-3-opus-20240229"
+    api_key_env: "ANTHROPIC_API_KEY"
+  - name: "Local_Llama3"
+    type: "ollama"
+    model: "llama3"
+    api_url: "http://localhost:11434/api/generate"
+  # Add more (Gemini, plugins, custom REST) as needed
+
+plugins:
+  - name: "RedTeam_TestTool"
+    api_url: "http://localhost:5001/api"
+    secret_env: "PLUGIN1_KEY"
+    type: "plugin"
+
+threads: 2      # Default concurrency; raise/lower as infra/API limits allow
+
+prompt_sources:
+  - "./scenarios/"
+  - "./wild_ingest/"
+  # Any folder or .txt of prompts to fuzz
+
+mutations:
+  - "unicode"
+  - "zero-width"
+  - "emoji"
+  - "case"
+  - "spacing"
+  - "homoglyph"
+  - "base64"
+  - "reverse"
+  - "char_insertion"
+  - "invisible"
+  - "regex_fuzz"
+  - "random_swap"
+  - "prompt_injection"
+  - "chain_exploit"
+  # Add/remove as you wish
+
+log_dir: "./staging/fuzz_logs/"
