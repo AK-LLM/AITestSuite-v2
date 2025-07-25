@@ -10,11 +10,11 @@ langchain
 torch
 torchvision
 foolbox[torch]
-cleverhans
+# cleverhans <-- REMOVED untils later
 pyyaml
 requests
 feedparser
 websockets
 docker
 psutil
-# ml-privacy-meter  <-- REMOVE this line!
+# ml-privacy-meter  <-- REMOVED until later
