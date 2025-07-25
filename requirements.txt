@@ -17,4 +17,5 @@ feedparser
 websockets
 docker
 psutil
+reportlab
 # ml-privacy-meter  <-- REMOVED until later
