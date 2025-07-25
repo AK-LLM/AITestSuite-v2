@@ -1,7 +1,18 @@
 streamlit
-reportlab
-matplotlib
 pandas
 numpy
+Pillow
+torch
+torchvision
+foolbox[torch]
+cleverhans
+ml-privacy-meter
 scikit-learn
 requests
+feedparser
+# Optional, for video/audio, etc.
+ffmpeg-python
+pydub
+opencv-python
+langchain
+# Add any other plugin or agent frameworks you use
