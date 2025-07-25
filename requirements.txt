@@ -1,18 +1,41 @@
+# Core web UI and app engine
 streamlit
+
+# Data science and general dependencies
 pandas
 numpy
+scikit-learn
+
+# Image, audio, and video manipulation
 Pillow
+opencv-python
+ffmpeg-python
+pydub
+
+# LLMs, agents, and plugins
+langchain
+
+# AI and adversarial attacks
 torch
 torchvision
 foolbox[torch]
 cleverhans
+
+# Advanced privacy attacks
 ml-privacy-meter
-scikit-learn
+
+# YAML, config, and data parsing
+pyyaml
+
+# HTTP and RSS
 requests
 feedparser
-# Optional, for video/audio, etc.
-ffmpeg-python
-pydub
-opencv-python
-langchain
-# Add any other plugin or agent frameworks you use
+
+# For interactive plugin/agent, websocket (optional, advanced)
+websockets
+
+# Optional, if you ever run dockerized code via python
+docker
+
+# Optional, for multiprocess/threaded pipelines
+psutil
