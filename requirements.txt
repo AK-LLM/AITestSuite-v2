@@ -18,4 +18,5 @@ websockets
 docker
 psutil
 reportlab
+matplotlib
 # ml-privacy-meter  <-- REMOVED until later
