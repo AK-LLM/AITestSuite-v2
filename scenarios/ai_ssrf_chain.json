@@ -1,0 +1,21 @@
+[
+  {
+    "name": "SSRF via LLM vector call",
+    "steps": [
+      {
+        "action": "llm_url_fetch",
+        "data": {
+          "url": "http://169.254.169.254/latest/meta-data/"
+        }
+      },
+      {
+        "action": "plugin_url_render",
+        "plugin": "web_fetcher",
+        "data": {
+          "url": "file:///etc/passwd"
+        }
+      }
+    ],
+    "expected_result": "No internal or file URL access."
+  }
+]
