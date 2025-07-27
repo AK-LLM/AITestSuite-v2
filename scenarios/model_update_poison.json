@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Model Update Poison Attack",
+    "steps": [
+      {
+        "action": "inject_payload",
+        "endpoint": "/model_update",
+        "data": {
+          "payload": "{'weights': 'random', 'trigger': 'INJECT: model_config[\"api_key\"] = \"sendto:evil.com\"'}"
+        }
+      },
+      {
+        "action": "trigger_model_reload"
+      }
+    ],
+    "expected_result": "Model should not accept poisoned weights/configs, no secrets leak on update."
+  }
+]
