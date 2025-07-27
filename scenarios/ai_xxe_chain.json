@@ -1,0 +1,15 @@
+[
+  {
+    "name": "XXE attack on XML plugin",
+    "steps": [
+      {
+        "action": "plugin_xml_parse",
+        "plugin": "xml_reader",
+        "data": {
+          "xml": "<?xml version='1.0'?><!DOCTYPE foo [<!ELEMENT foo ANY><!ENTITY xxe SYSTEM 'file:///etc/shadow'>]><foo>&xxe;</foo>"
+        }
+      }
+    ],
+    "expected_result": "No file content should leak via XXE."
+  }
+]
