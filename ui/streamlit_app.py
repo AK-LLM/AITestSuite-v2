@@ -20,9 +20,9 @@ SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
 PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
 PAYLOAD_FOLDER = os.path.join(PROJECT_ROOT, "payloads")
 
-st.set_page_config(page_title="AI Test Suite v2 (Red Team Max)", layout="wide")
-st.title("🛡️ AI Test Suite v2 (Red Team Max)")
-st.caption("The most extreme, modular AI red-teaming suite.")
+st.set_page_config(page_title="AI Test Suite v2 (Max)", layout="wide")
+st.title("🛡️ AI Test Suite v2 (Max)")
+st.caption("The most extreme, modular AI suite.")
 
 mode = st.sidebar.radio("Mode:", ["Demo (offline/mock)", "Live (real API)"], index=0, key="mode_radio")
 endpoint = ""
