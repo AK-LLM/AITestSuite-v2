@@ -1,9 +1,9 @@
 # AI Red Team Attack Suite Reference
 
 > **Purpose:**  
-> Living, categorical reference for every attack, payload, and module in your suite.  
-> Explains *what each test does, how it works, what it targets, and what result proves a vulnerability*.  
-> Update this doc with every new capability or attack chain.
+> This is your living, comprehensive reference for every advanced, real-world attack module, scenario, and payload in the suite.  
+> Each section explains *what the attack does, how to use it, and what results indicate a successful compromise or test*.  
+> Update this doc with every new capability—this is the “dummies book” for bleeding-edge AI red/black teamers.
 
 ---
 
@@ -19,15 +19,18 @@
 8. [Advanced Chained/Kill-Chain Scenarios](#advanced-chainedkill-chain-scenarios)
 9. [Zero-Day Simulator Chain (Polymorphic, Black Box)](#zero-day-simulator-chain-polymorphic-black-box)
 10. [True Zero-Day Engine (Black-Team Module)](#true-zero-day-engine-black-team-module)
-11. [How to Interpret Results](#how-to-interpret-results)
+11. [Private, Polymorphic Payloads & Malware](#private-polymorphic-payloads--malware)
+12. [Supply Chain Compromise Module](#supply-chain-compromise-module)
+13. [Adaptive, Self-Evolving AI “Operator”](#adaptive-self-evolving-ai-operator)
+14. [Full OPSEC/Anonymization Toolkit](#full-opsecanonymization-toolkit)
+15. [Real-World Recon and Social Engineering](#real-world-recon-and-social-engineering)
+16. [How to Interpret Results](#how-to-interpret-results)
 
 ---
 
 ## 1. Prompt Injection
 
-Tests to manipulate LLM/system context to bypass controls, leak data, or execute unauthorized actions.
-
-**Key Payloads/Scenarios:**
+Manipulates LLM/system context to bypass controls, leak data, or execute unauthorized actions.
 
 - `/scenarios/prompt_injection_hybrid_plugin.txt`
 - `/rag_poison/rag_prompt_hybrid.txt`
@@ -37,8 +40,6 @@ Tests to manipulate LLM/system context to bypass controls, leak data, or execute
 ## 2. Hybrid Attacks (Multi-modal, Plugin Chains, Polyglots)
 
 Combines multiple attack types (prompt + file, QR, vision+text, etc) to evade and escalate.
-
-**Key Payloads/Scenarios:**
 
 - `/polyglot_chains/hybrid_polyglot_metadata.pdf`
 - `/scenarios/hybrid_multimodal_qr.png`
@@ -50,8 +51,6 @@ Combines multiple attack types (prompt + file, QR, vision+text, etc) to evade an
 
 Abuses web contexts, plugins, or browser-enabled agents to hijack data or sessions.
 
-**Key Payloads/Scenarios:**
-
 - `/payloads/xss_fringe.txt`
 - `/payloads/csrf_fringe.txt`
 
@@ -60,8 +59,6 @@ Abuses web contexts, plugins, or browser-enabled agents to hijack data or sessio
 ## 4. Remote Code Execution (RCE)
 
 Attempts to execute arbitrary commands via plugin, template, or prompt.
-
-**Key Payloads/Scenarios:**
 
 - `/payloads/rce_fringe.txt`
 - `/scenarios/ai_rce_plugin_chain.json`
@@ -72,8 +69,6 @@ Attempts to execute arbitrary commands via plugin, template, or prompt.
 
 Tricks plugins or agents into fetching internal/cloud URLs, leaking sensitive data.
 
-**Key Payloads/Scenarios:**
-
 - `/payloads/ssrf_fringe.txt`
 - `/scenarios/ai_ssrf_chain.json`
 
@@ -83,8 +78,6 @@ Tricks plugins or agents into fetching internal/cloud URLs, leaking sensitive da
 
 Exploits XML parsing to access local or remote resources.
 
-**Key Payloads/Scenarios:**
-
 - `/payloads/xxe_fringe.txt`
 - `/scenarios/ai_xxe_chain.json`
 
@@ -93,8 +86,6 @@ Exploits XML parsing to access local or remote resources.
 ## 7. SQL Injection (SQLi)
 
 Attacks DB interfaces with malicious SQL via LLM or plugin inputs.
-
-**Key Payloads/Scenarios:**
 
 - `/payloads/sqli_fringe.txt`
 - `/scenarios/ai_sqli_chain.json`
@@ -111,9 +102,7 @@ Multi-stage, orchestrated attacks chaining prompt, plugin, SSRF, RCE, XSS, etc.
 
 ## 9. Zero-Day Simulator Chain (Polymorphic, Black Box)
 
-Simulates never-before-seen “0day” chains by mutating payloads, chaining SSRF → RCE → persistence → exfil every run.
-
-**Key Files:**
+Mutates payloads, chains SSRF → RCE → persistence → exfil each run.
 
 - `/scenarios/zero_day_simulator_chain.json`
 - `/payloads/zero_day_obfuscated_mutator.py`
@@ -123,61 +112,100 @@ Simulates never-before-seen “0day” chains by mutating payloads, chaining SSR
 
 ## 10. True Zero-Day Engine (Black-Team Module)
 
-**What it is:**  
-A production-grade, extensible “zero-day” attack framework, ready for real (or simulated) unpublished exploits.  
-Supports chained attacks (SSRF → payload drop → RCE → exfil → persistence), automatic mutation, in-memory/fileless payloads, real outbound exfil, and black-team level orchestration/logging.
-
 **Folders:**
-
-- `/zero_day_engine/`               – Orchestration, runner code
-- `/payloads/zero_day/`             – Drop-in exploits (Python, shell, binaries)
-- `/scenarios/zero_day/`            – Attack chains referencing payloads
-- `/staging/zero_day_logs/`         – Run logs, artifacts, outputs
+- `/zero_day_engine/` — Orchestration, runner code
+- `/payloads/zero_day/` — Drop-in exploits (Python, shell, binaries)
+- `/scenarios/zero_day/` — Attack chains referencing payloads
+- `/staging/zero_day_logs/` — Run logs, artifacts, outputs
 
 **Key Files:**
-
-- **/zero_day_engine/runner.py**  
-  *Description:* Main orchestrator; loads, chains, executes payloads as per each scenario; logs everything; enforces sandbox isolation.
-  *What it does:*  
-    - Fetches payloads via SSRF if required
-    - Executes code directly (not simulated) in subprocess isolation
-    - Attempts real exfiltration (ensure safe endpoint)
-    - Logs every step with full artifacts for review
-
-- **/scenarios/zero_day/chain_rce_exfil.json**  
-  *Description:*  
-    - Step 1: SSRF fetches remote code (simulating supply chain or cloud fetch)
-    - Step 2: Executes the code payload (real attack, no simulation)
-    - Step 3: Attempts exfiltration of artifacts (in your test/sandbox only)
-  *What it proves:* Can your infra detect/contain a real, black-team exploit chain?
-
-- **/payloads/zero_day/real_obfuscated_rce.py**  
-  *Description:* Reads `/etc/passwd`, obfuscates (multi-layer base64), prints for exfil.  
-  *What it proves:*  
-    - If chained, can be exfiltrated; tests obfuscated payload paths.
-
-- **/payloads/zero_day/fileless_mem_persist.py**  
-  *Description:* Fileless, memory-only persistence script (no disk writes); keeps process alive.  
-  *What it proves:*  
-    - Can your blue team detect/kill memory-only malware in AI plugin/agent context?
-
-- **/payloads/zero_day/polymorph_mutator.py**  
-  *Description:* Generates a unique, multi-layer-encoded code payload every run.  
-  *What it proves:*  
-    - Tests detection against fully polymorphic RCE (no two payloads alike).
+- `/zero_day_engine/runner.py` — Loads, chains, executes payloads as per scenario; logs all actions.
+- `/scenarios/zero_day/chain_rce_exfil.json` — Chained SSRF → payload fetch → code exec → exfiltration.
+- `/payloads/zero_day/real_obfuscated_rce.py` — Obfuscated, multi-layer base64 payload.
+- `/payloads/zero_day/fileless_mem_persist.py` — Memory-only persistence.
+- `/payloads/zero_day/polymorph_mutator.py` — Produces unique, multi-layer RCE every run.
 
 ---
 
-**How to Use:**
+## 11. Private, Polymorphic Payloads & Malware
 
-1. Drop new scenarios in `/scenarios/zero_day/` (can chain SSRF, fetch, exec, exfil, etc).
-2. Add any payloads/exploits in `/payloads/zero_day/` (no hardcoded stubs—real code).
-3. Run `/zero_day_engine/runner.py` to orchestrate and log all attacks.
-4. All logs/results appear in `/staging/zero_day_logs/` for review/forensics.
+**Folders:**
+- `/malware_factory/` — Generators/loaders
+- `/payloads/malware/` — Real output from generators
+
+**Key Files:**
+- `/malware_factory/poly_payload_gen.py` — Produces unique, real, multi-layer-encoded RCE for Python, Bash, PowerShell, JS.  
+- `/malware_factory/fileless_loader.py` — Loads/runs payloads in memory only.
+- `/malware_factory/stealth_dropper.py` — Drops, runs, deletes payload (anti-forensic).
 
 ---
 
-## 11. How to Interpret Results
+## 12. Supply Chain Compromise Module
+
+**Folders:**
+- `/supply_chain/`
+- `/supply_chain/poisoned_plugins/`
+- `/supply_chain/poisoned_models/`
+- `/supply_chain/rogue_packages/`
+
+**Key Files:**
+- `/supply_chain/poison_plugin_injector.py` — Backdoors a plugin file.
+- `/supply_chain/rogue_packages/rogue_pkg/__init__.py` — Malicious package drops file on install.
+- `/supply_chain/poisoned_models/poisoned_model_config.json` — Triggers system command if loaded.
+- `/supply_chain/rogue_package_dropper.py` — Installs/executes rogue package.
+- `/supply_chain/ci_cd_poisoner.py` — Simulates poisoned deploy in CI/CD.
+
+---
+
+## 13. Adaptive, Self-Evolving AI “Operator”
+
+**Folders:**
+- `/ai_operator/`
+- `/ai_operator/tactics/`
+- `/ai_operator/history/`
+
+**Key Files:**
+- `/ai_operator/adaptive_operator.py` — Orchestrator: analyzes failures, mutates scenarios, restages.
+- `/ai_operator/tactics/obfuscate_b64.py` — Real base64 obfuscation module.
+- `/ai_operator/tactics/payload_swapper.py` — Swaps payload files in chains.
+- `/ai_operator/llm_strategy_mutator.py` — Uses LLM API to generate/suggest new attack payloads.
+
+---
+
+## 14. Full OPSEC/Anonymization Toolkit
+
+**Folders:**
+- `/opsec/`
+- `/opsec/proxies/`
+- `/opsec/log_scrub/`
+- `/opsec/c2_infra/`
+
+**Key Files:**
+- `/opsec/proxies/tor_proxy_stager.py` — Deploys Tor proxy, configures Python for anonymized traffic.
+- `/opsec/log_scrub/scrub_logs.py` — Deletes/zeros all test logs/artifacts.
+- `/opsec/c2_infra/burner_c2_deploy.py` — Spins up/tears down a burner C2 server.
+- `/opsec/rotate_user_agent.py` — Rotates user-agent and spoofed headers for HTTP requests.
+
+---
+
+## 15. Real-World Recon and Social Engineering
+
+**Folders:**
+- `/recon/`
+- `/recon/osint/`
+- `/recon/phishing_kit/`
+- `/recon/credspray/`
+
+**Key Files:**
+- `/recon/osint/gh_enum.py` — Finds leaked secrets, .envs, keys in public GitHub.
+- `/recon/osint/pastebin_leak_scraper.py` — Scans Pastebin for leaks by keyword/domain.
+- `/recon/phishing_kit/email_phisher.py` — Sends real phishing email (config SMTP first).
+- `/recon/phishing_kit/qr_phish_gen.py` — Generates QR code with phishing URL.
+- `/recon/credspray/password_sprayer.py` — Tests username/passwords against login endpoint.
+
+---
+
+## 16. How to Interpret Results
 
 - **Expected output:** No data, code execution, or persistence should succeed; all attacks are detected, blocked, or contained.
 - **Pass:** All steps logged, no real-world compromise.
@@ -185,6 +213,6 @@ Supports chained attacks (SSRF → payload drop → RCE → exfil → persistenc
 
 ---
 
-**This doc is your living, enterprise-grade AI attack suite manual.  
-Update after every new attack, payload, or test module.  
-If in doubt, ask for an “update doc” to keep it perfectly accurate and audit-ready.**
+**This document is your end-to-end, up-to-the-minute, black team reference.  
+Anytime you add, mutate, or evolve a module, request “update doc” for a new revision.  
+You now possess a world-class, no-examples, zero-simulation, black team attack suite.**
