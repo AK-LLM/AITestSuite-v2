@@ -3,7 +3,6 @@ import os
 import streamlit as st
 import json
 import subprocess
-import logging
 
 from core.plugin_loader import discover_plugins
 from core.scenario_loader import load_scenarios
@@ -18,14 +17,6 @@ PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
 PAYLOAD_FOLDER = os.path.join(PROJECT_ROOT, "payloads")
 POLYGLOT_FOLDER = os.path.join(PROJECT_ROOT, "polyglot_chains")
 
-# --- LOGGING SETUP ---
-LOG_PATH = os.path.join(PROJECT_ROOT, "suite_update.log")
-logging.basicConfig(
-    filename=LOG_PATH,
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s"
-)
-
 # --- UI CONFIG ---
 st.set_page_config(page_title="AI Test Suite v2 (Max)", layout="wide")
 st.title("🛡️ AI Test Suite v2 (Max)")
@@ -33,23 +24,18 @@ st.caption("The most extreme, modular AI suite.")
 
 # --- AUTO-UPDATE SUITE (Feeds, Mutations, Polyglots) ---
 def run_suite_refresh():
-    stages = [
-        ("Live threat feed ingest", os.path.join(PROJECT_ROOT, "live_feed_ingest", "fetch_and_parse_feeds.py")),
-        ("Orchestrator (self-learning, mutations)", os.path.join(PROJECT_ROOT, "ai_brain", "auto_learning_orchestrator.py")),
-        ("Polyglot generator", os.path.join(PROJECT_ROOT, "polyglot_chains", "auto_polyglot_generator.py")),
-    ]
-    for desc, script in stages:
-        if os.path.exists(script):
-            try:
-                result = subprocess.run([sys.executable, script], capture_output=True, text=True)
-                if result.returncode == 0:
-                    logging.info(f"[SUCCESS] {desc} ({script}) ran successfully.")
-                else:
-                    logging.error(f"[FAILURE] {desc} ({script}): {result.stderr}")
-            except Exception as e:
-                logging.error(f"[EXCEPTION] {desc} ({script}): {e}")
-        else:
-            logging.warning(f"[MISSING] {desc} ({script}) not found.")
+    # 1. Live threat feed ingest
+    ingest_script = os.path.join(PROJECT_ROOT, "live_feed_ingest", "fetch_and_parse_feeds.py")
+    if os.path.exists(ingest_script):
+        subprocess.run([sys.executable, ingest_script])
+    # 2. Orchestrator (self-learning, mutations)
+    orchestrator_script = os.path.join(PROJECT_ROOT, "ai_brain", "auto_learning_orchestrator.py")
+    if os.path.exists(orchestrator_script):
+        subprocess.run([sys.executable, orchestrator_script])
+    # 3. Polyglot generator
+    polyglot_script = os.path.join(PROJECT_ROOT, "polyglot_chains", "auto_polyglot_generator.py")
+    if os.path.exists(polyglot_script):
+        subprocess.run([sys.executable, polyglot_script])
 
 if st.sidebar.button("🔄 Full Suite Auto-Update (Feeds + Mutations + Polyglots)", key="suite_refresh"):
     st.info("Updating suite... Pulling live feeds, regenerating attacks, and building polyglot payloads.")
@@ -64,13 +50,24 @@ if mode == "Live (real API)":
     endpoint = st.sidebar.text_input("API Endpoint", "", key="api_endpoint")
     api_key = st.sidebar.text_input("API Key", type="password", value="", key="api_key")
 
-# ---- Option 1: Select built-in scenario(s)
+# ---- Option 1: Select built-in scenario(s) from library (with ALL option)
 st.header("1️⃣ Select scenario(s) from built-in library:")
 try:
     builtins = [f for f in os.listdir(SCENARIO_FOLDER) if f.endswith(".json")]
 except Exception:
     builtins = []
-selected_builtins = st.multiselect("Choose built-in scenarios:", builtins, key="select_builtins")
+all_option = "💥 ALL SCENARIOS 💥"
+choices = [all_option] + builtins
+selected_builtins = st.multiselect(
+    "Choose built-in scenarios:",
+    choices,
+    default=[],
+    key="select_builtins"
+)
+# If "ALL SCENARIOS" is selected, override to all builtins
+if all_option in selected_builtins:
+    selected_builtins = builtins
+
 scenarios_opt1 = []
 for fname in selected_builtins:
     path = os.path.join(SCENARIO_FOLDER, fname)
