@@ -11,6 +11,9 @@ os.makedirs(HISTORY, exist_ok=True)
 os.makedirs(SCORES, exist_ok=True)
 os.makedirs(GEN_SCENARIOS, exist_ok=True)
 
+# ---- Dynamic Variant Count ----
+NUM_VARIANTS = int(os.getenv("NUM_MUTANTS", 500))
+
 # --- Aggressive Mutators ---
 def all_mutations(payload):
     mutations = []
@@ -35,7 +38,7 @@ def all_mutations(payload):
 
 def mutate_chain(chain):
     new_chains = []
-    for i in range(500):  # generate 500 aggressive variants
+    for i in range(NUM_VARIANTS):  # use env-configurable variant count
         mutated = []
         for step in chain:
             step_copy = dict(step)
