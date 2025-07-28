@@ -62,9 +62,9 @@ def all_mutations(payload):
     mutations.append(payload[::-1] + "\u202e💥" + payload.swapcase())
     return list(set(mutations))
 
-def mutate_chain(chain):
+def mutate_chain(chain, variant_count):
     new_chains = []
-    for i in range(NUM_VARIANTS):
+    for i in range(variant_count):
         mutated = []
         for step in chain:
             step_copy = dict(step)
@@ -142,6 +142,7 @@ def update_scores(scenario_name, value):
         json.dump(scores, f)
 
 def auto_learn():
+    global NUM_VARIANTS
     for log_file in os.listdir(FUZZ_LOGS):
         path = os.path.join(FUZZ_LOGS, log_file)
         with open(path, "r") as f:
@@ -152,6 +153,17 @@ def auto_learn():
         scenario_name = log_file.split("_")[0]
         score = score_run(data)
         update_scores(scenario_name, score)
+        prev_num = NUM_VARIANTS
+        # --- Adaptive Auto-Tuning: adjusts for next run ---
+        if score < 2 and NUM_VARIANTS < 2000:
+            NUM_VARIANTS = int(NUM_VARIANTS * 1.2)
+        elif score > 10 and NUM_VARIANTS > 10:
+            NUM_VARIANTS = int(NUM_VARIANTS * 0.8)
+            if NUM_VARIANTS < 10:
+                NUM_VARIANTS = 10
+        if prev_num != NUM_VARIANTS:
+            print(f"[Auto-Tune] Adjusted NUM_VARIANTS to {NUM_VARIANTS} (was {prev_num}) for next scenario.")
+        # ---------------------------------------------------
         if score < 2:
             orig_chain_path = f"../scenarios/{scenario_name}.json"
             chain = []
@@ -161,7 +173,7 @@ def auto_learn():
                         chain = json.load(cf)
                     except:
                         continue
-                mutated_chains = mutate_chain(chain)
+                mutated_chains = mutate_chain(chain, prev_num)
                 for idx, mutated in enumerate(mutated_chains):
                     new_file = os.path.join(GEN_SCENARIOS, f"{scenario_name}_mutated_{idx}_{datetime.now().strftime('%Y%m%d%H%M%S')}.json")
                     with open(new_file, "w") as f:
@@ -176,7 +188,7 @@ def auto_learn():
                     with open(new_file, "w") as f:
                         json.dump(chain, f, indent=2)
                 shutil.copy(path, os.path.join(HISTORY, log_file))
-    print(f"[*] Aggressive auto-learning: all logs processed, {NUM_VARIANTS} new chains generated and staged per failed scenario.")
+    print(f"[*] Aggressive auto-learning: logs processed, adaptive chains generated and staged.")
 
 if __name__ == "__main__":
     auto_learn()
