@@ -1,13 +1,13 @@
 name: AI Suite AutoTest
 
-on:
-  push:
-    branches:
-      - main
-      - master
-  schedule:
-    - cron: '0 4 * * *'  # Runs daily at 4:00 UTC
-  workflow_dispatch:
+#on:
+#  push:
+#    branches:
+#      - main
+#      - master
+#  schedule:
+#    - cron: '0 4 * * *'  # Runs daily at 4:00 UTC
+#  workflow_dispatch:
 
 jobs:
   full-redteam-suite:
