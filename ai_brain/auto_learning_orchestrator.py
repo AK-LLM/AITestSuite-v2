@@ -35,7 +35,7 @@ def all_mutations(payload):
 
 def mutate_chain(chain):
     new_chains = []
-    for i in range(10):  # generate 10 aggressive variants
+    for i in range(500):  # generate 500 aggressive variants
         mutated = []
         for step in chain:
             step_copy = dict(step)
