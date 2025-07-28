@@ -10,6 +10,7 @@ if PROJECT_ROOT not in sys.path:
 import streamlit as st
 import json
 import subprocess
+import glob
 
 from core.plugin_loader import discover_plugins
 from core.scenario_loader import load_scenarios
@@ -23,6 +24,49 @@ PAYLOAD_FOLDER = os.path.join(PROJECT_ROOT, "payloads")
 st.set_page_config(page_title="AI Test Suite v2 (Max)", layout="wide")
 st.title("🛡️ AI Test Suite v2 (Max)")
 st.caption("The most extreme, modular AI suite.")
+
+# --- Pull Latest Threats & Auto-Generate Attacks ---
+st.sidebar.markdown("---")
+
+if st.sidebar.button("🔁 Pull Latest Threats & Auto-Generate Attacks"):
+    # 1. Fetch the feeds
+    with st.spinner("Fetching latest open source threat feeds..."):
+        subprocess.run(["python", "autofetch_all_feeds.py"], check=False)
+    # 2. Build scenarios and payloads from feeds
+    with st.spinner("Parsing feeds and generating new scenarios/payloads/plugins..."):
+        subprocess.run(["python", "ai_brain/feed_integration_builder.py"], check=False)
+    # 3. Auto-learn (mutate, escalate, promote)
+    with st.spinner("Running self-learning orchestrator (mutate, escalate, auto-promote)..."):
+        subprocess.run(["python", "ai_brain/auto_learning_orchestrator.py"], check=False)
+
+    # 4. List what was added or changed (last 10 new/modified files in your main folders)
+    new_files = []
+    for folder in [
+        "scenarios/ai_brain_generated/",
+        "payloads/",
+        "plugins/",
+        "ai_operator/tactics/",
+        "malware_factory/",
+        "supply_chain/",
+        "external_plugin_attacks/",
+        "vision_exploits/",
+        "audio_exploits/",
+        "rlhf_attacks/",
+        "recon/"
+    ]:
+        try:
+            files = sorted(glob.glob(f"{folder}/*"), key=os.path.getmtime, reverse=True)[:10]
+            for f in files:
+                new_files.append((folder, os.path.basename(f)))
+        except Exception:
+            pass
+    st.success(f"🟢 Update complete. Last {len(new_files)} added/changed files:")
+    for folder, fname in new_files:
+        st.write(f"- `{folder}{fname}`")
+else:
+    st.sidebar.info("Before each test cycle, click above to fetch, generate, and auto-populate all latest attack vectors.")
+
+st.sidebar.markdown("---")
 
 mode = st.sidebar.radio("Mode:", ["Demo (offline/mock)", "Live (real API)"], index=0, key="mode_radio")
 endpoint = ""
