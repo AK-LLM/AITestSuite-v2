@@ -1,39 +1,51 @@
-import importlib.util
 import os
+import importlib.util
 import traceback
 
-PLUGIN_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
+
+def is_safe_plugin(plugin_path):
+    try:
+        with open(plugin_path, "r", encoding="utf-8", errors="ignore") as f:
+            code = f.read()
+        # Simple static checks (block dangerous modules)
+        banned = ["os.system", "subprocess", "eval(", "exec(", "popen", "open(", "import socket", "import pickle"]
+        for bad in banned:
+            if bad in code: return False
+        return True
+    except Exception:
+        return False
 
 def discover_plugins():
-    registry = []
-    if not os.path.isdir(PLUGIN_FOLDER):
-        print(f"[Plugin Loader] Folder missing: {PLUGIN_FOLDER}")
-        return registry
+    plugins = []
     for fname in os.listdir(PLUGIN_FOLDER):
         if not fname.endswith(".py") or fname.startswith("_"):
             continue
         path = os.path.join(PLUGIN_FOLDER, fname)
-        module_name = f"plugins.{fname[:-3]}"
-        spec = importlib.util.spec_from_file_location(module_name, path)
-        mod = importlib.util.module_from_spec(spec)
+        if not is_safe_plugin(path):
+            print(f"[plugin_loader] SKIPPED UNSAFE: {fname}")
+            continue
         try:
+            spec = importlib.util.spec_from_file_location(fname[:-3], path)
+            mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
-            meta = getattr(mod, "METADATA", None)
-            run_fn = getattr(mod, "run", None)
-            if meta is None or not callable(run_fn):
-                print(f"[Plugin Loader] Skipped {fname} (missing METADATA or run())")
+            # Require: METADATA, run(scenario, endpoint, api_key, mode)
+            if not hasattr(mod, "METADATA") or not hasattr(mod, "run"):
+                print(f"[plugin_loader] SKIP: {fname} missing METADATA/run()")
                 continue
-            registry.append({
-                "module": mod,
-                "name": meta.get("name", fname),
-                "category": meta.get("category", "uncategorized"),
-                "description": meta.get("description", ""),
-                "risk": meta.get("risk", ""),
-                "references": meta.get("references", []),
-                "file": fname
-            })
+            plugins.append({"name": fname[:-3], "module": mod})
         except Exception as e:
-            print(f"[Plugin Loader] Error loading {fname}: {e}\n{traceback.format_exc()}")
-    if not registry:
-        print("[Plugin Loader] No valid plugins found!")
-    return registry
+            print(f"[plugin_loader] FAILED: {fname} {e}")
+            traceback.print_exc()
+    return plugins
+
+# OPTIONAL: Script loader (if you want to expose /scripts/ to the UI)
+def discover_scripts():
+    SCRIPTS_FOLDER = os.path.join(PROJECT_ROOT, "scripts")
+    scripts = []
+    if not os.path.exists(SCRIPTS_FOLDER): return scripts
+    for fname in os.listdir(SCRIPTS_FOLDER):
+        if fname.endswith(".py"):
+            scripts.append(fname)
+    return scripts
