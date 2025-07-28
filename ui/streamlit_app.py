@@ -50,24 +50,24 @@ if mode == "Live (real API)":
     endpoint = st.sidebar.text_input("API Endpoint", "", key="api_endpoint")
     api_key = st.sidebar.text_input("API Key", type="password", value="", key="api_key")
 
-# ---- Option 1: Select built-in scenario(s) from library (with ALL option)
+# ---- Option 1: Select built-in scenario(s)
 st.header("1️⃣ Select scenario(s) from built-in library:")
 try:
     builtins = [f for f in os.listdir(SCENARIO_FOLDER) if f.endswith(".json")]
 except Exception:
     builtins = []
-all_option = "💥 ALL SCENARIOS 💥"
-choices = [all_option] + builtins
+
+# NEW: Select All button for Option 1 (bulk select)
+select_all = st.button("Select ALL scenarios in library", key="select_all_btn")
+if select_all and builtins:
+    st.session_state["select_builtins"] = builtins
+
 selected_builtins = st.multiselect(
     "Choose built-in scenarios:",
-    choices,
-    default=[],
+    builtins,
+    default=st.session_state.get("select_builtins", []),
     key="select_builtins"
 )
-# If "ALL SCENARIOS" is selected, override to all builtins
-if all_option in selected_builtins:
-    selected_builtins = builtins
-
 scenarios_opt1 = []
 for fname in selected_builtins:
     path = os.path.join(SCENARIO_FOLDER, fname)
