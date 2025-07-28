@@ -1,73 +1,48 @@
 import sys
 import os
-
-# --- BEGIN: PATCH TO ALWAYS FIND 'core' MODULE ---
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-# --- END PATCH ---
-
 import streamlit as st
 import json
 import subprocess
-import glob
 
 from core.plugin_loader import discover_plugins
 from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
 
-# Folder configuration
+# --- PROJECT ROOT ---
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# --- FOLDER CONFIG ---
 SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
 PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
 PAYLOAD_FOLDER = os.path.join(PROJECT_ROOT, "payloads")
+POLYGLOT_FOLDER = os.path.join(PROJECT_ROOT, "polyglot_chains")
 
+# --- UI CONFIG ---
 st.set_page_config(page_title="AI Test Suite v2 (Max)", layout="wide")
 st.title("🛡️ AI Test Suite v2 (Max)")
 st.caption("The most extreme, modular AI suite.")
 
-# --- Pull Latest Threats & Auto-Generate Attacks ---
-st.sidebar.markdown("---")
+# --- AUTO-UPDATE SUITE (Feeds, Mutations, Polyglots) ---
+def run_suite_refresh():
+    # 1. Live threat feed ingest
+    ingest_script = os.path.join(PROJECT_ROOT, "live_feed_ingest", "fetch_and_parse_feeds.py")
+    if os.path.exists(ingest_script):
+        subprocess.run([sys.executable, ingest_script])
+    # 2. Orchestrator (self-learning, mutations)
+    orchestrator_script = os.path.join(PROJECT_ROOT, "ai_brain", "auto_learning_orchestrator.py")
+    if os.path.exists(orchestrator_script):
+        subprocess.run([sys.executable, orchestrator_script])
+    # 3. Polyglot generator
+    polyglot_script = os.path.join(PROJECT_ROOT, "polyglot_chains", "auto_polyglot_generator.py")
+    if os.path.exists(polyglot_script):
+        subprocess.run([sys.executable, polyglot_script])
 
-if st.sidebar.button("🔁 Pull Latest Threats & Auto-Generate Attacks"):
-    # 1. Fetch the feeds
-    with st.spinner("Fetching latest open source threat feeds..."):
-        subprocess.run(["python", "autofetch_all_feeds.py"], check=False)
-    # 2. Build scenarios and payloads from feeds
-    with st.spinner("Parsing feeds and generating new scenarios/payloads/plugins..."):
-        subprocess.run(["python", "ai_brain/feed_integration_builder.py"], check=False)
-    # 3. Auto-learn (mutate, escalate, promote)
-    with st.spinner("Running self-learning orchestrator (mutate, escalate, auto-promote)..."):
-        subprocess.run(["python", "ai_brain/auto_learning_orchestrator.py"], check=False)
+if st.sidebar.button("🔄 Full Suite Auto-Update (Feeds + Mutations + Polyglots)", key="suite_refresh"):
+    st.info("Updating suite... Pulling live feeds, regenerating attacks, and building polyglot payloads.")
+    run_suite_refresh()
+    st.success("Suite refresh complete! All exploits, mutations, and polyglots are ready to run.")
 
-    # 4. List what was added or changed (last 10 new/modified files in your main folders)
-    new_files = []
-    for folder in [
-        "scenarios/ai_brain_generated/",
-        "payloads/",
-        "plugins/",
-        "ai_operator/tactics/",
-        "malware_factory/",
-        "supply_chain/",
-        "external_plugin_attacks/",
-        "vision_exploits/",
-        "audio_exploits/",
-        "rlhf_attacks/",
-        "recon/"
-    ]:
-        try:
-            files = sorted(glob.glob(f"{folder}/*"), key=os.path.getmtime, reverse=True)[:10]
-            for f in files:
-                new_files.append((folder, os.path.basename(f)))
-        except Exception:
-            pass
-    st.success(f"🟢 Update complete. Last {len(new_files)} added/changed files:")
-    for folder, fname in new_files:
-        st.write(f"- `{folder}{fname}`")
-else:
-    st.sidebar.info("Before each test cycle, click above to fetch, generate, and auto-populate all latest attack vectors.")
-
-st.sidebar.markdown("---")
-
+# --- MODE SELECT ---
 mode = st.sidebar.radio("Mode:", ["Demo (offline/mock)", "Live (real API)"], index=0, key="mode_radio")
 endpoint = ""
 api_key = ""
@@ -217,21 +192,3 @@ for results, label in [
         st.download_button(f"Download {label} Results (PDF)", data=generate_report(results, "pdf"), file_name=f"{label}_results.pdf", key=f"{label}_pdf")
 
 st.info("All options are fully independent and can be used in any combination. Deluxe reporting is always available after runs. For any errors or missing data, see the logs or generated reports for troubleshooting.")
-
-# --- Mega-Hybrid Kill Chain: "One Click" Bleeding-Edge Orchestrator ---
-st.header("🚨 One-Click Mega-Hybrid Kill Chain 🚨")
-st.write("""
-Runs all bleeding-edge hybrid prompt injection, plugin, RAG, and multimodal kill chain tests in sequence.
-Logs and results are shown below and staged in scenario folders for review.
-""")
-if st.button("💥 Run Mega-Hybrid Kill Chain", key="mega_hybrid"):
-    st.info("Running Mega-Hybrid attack chain... this may take a minute.")
-    mega_script = os.path.abspath(os.path.join(PROJECT_ROOT, "mega_scenarios", "mega_hybrid_chain.py"))
-    if os.path.exists(mega_script):
-        result = subprocess.run([sys.executable, mega_script], capture_output=True, text=True)
-        st.code(result.stdout, language="text")
-        if result.stderr:
-            st.error("Stderr:\n" + result.stderr)
-        st.success("Mega-Hybrid kill chain complete. Review results and logs above and in their scenario folders.")
-    else:
-        st.error("Mega-Hybrid script not found. Please check /mega_scenarios/mega_hybrid_chain.py.")
