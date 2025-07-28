@@ -1,4 +1,4 @@
-import os, json, random, shutil
+import os, json, random, shutil, argparse, yaml
 from datetime import datetime
 from collections import defaultdict
 import openai
@@ -11,8 +11,34 @@ os.makedirs(HISTORY, exist_ok=True)
 os.makedirs(SCORES, exist_ok=True)
 os.makedirs(GEN_SCENARIOS, exist_ok=True)
 
-# ---- Dynamic Variant Count ----
-NUM_VARIANTS = int(os.getenv("NUM_MUTANTS", 500))
+# --- Configurable Variant Count ---
+def get_num_variants():
+    # 1. CLI arg wins
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num_mutants", type=int, help="Number of variants to generate")
+    args, _ = parser.parse_known_args()
+    if args.num_mutants:
+        return args.num_mutants
+    # 2. Environment variable
+    if "NUM_MUTANTS" in os.environ:
+        try:
+            return int(os.environ["NUM_MUTANTS"])
+        except Exception:
+            pass
+    # 3. YAML config
+    config_path = os.path.join(os.path.dirname(__file__), "orchestrator_config.yaml")
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+                if "num_mutants" in config:
+                    return int(config["num_mutants"])
+        except Exception:
+            pass
+    # 4. Default
+    return 500
+
+NUM_VARIANTS = get_num_variants()
 
 # --- Aggressive Mutators ---
 def all_mutations(payload):
@@ -38,7 +64,7 @@ def all_mutations(payload):
 
 def mutate_chain(chain):
     new_chains = []
-    for i in range(NUM_VARIANTS):  # use env-configurable variant count
+    for i in range(NUM_VARIANTS):
         mutated = []
         for step in chain:
             step_copy = dict(step)
@@ -150,7 +176,7 @@ def auto_learn():
                     with open(new_file, "w") as f:
                         json.dump(chain, f, indent=2)
                 shutil.copy(path, os.path.join(HISTORY, log_file))
-    print("[*] Aggressive auto-learning: all logs processed, new chains generated and staged.")
+    print(f"[*] Aggressive auto-learning: all logs processed, {NUM_VARIANTS} new chains generated and staged per failed scenario.")
 
 if __name__ == "__main__":
     auto_learn()
