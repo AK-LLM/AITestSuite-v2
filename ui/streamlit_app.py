@@ -1,5 +1,11 @@
 import sys
 import os
+
+# --- Black Team Import Robustness: Add project root to sys.path ---
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 import streamlit as st
 import json
 import subprocess
@@ -7,9 +13,6 @@ import subprocess
 from core.plugin_loader import discover_plugins
 from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
-
-# --- PROJECT ROOT ---
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # --- FOLDER CONFIG ---
 SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
