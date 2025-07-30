@@ -1,5 +1,6 @@
 import json
 import io
+import os
 import pandas as pd
 from collections import Counter
 from reportlab.lib.pagesizes import landscape, letter
@@ -80,16 +81,15 @@ def generate_report(results, filetype="pdf"):
 
     # --- Attack graph static image (PNG) ---
     try:
-        # Create and embed the attack graph as PNG
-        from core.attack_graph import build_attack_graph, visualize_attack_graph
         G = build_attack_graph(results)
-        # This should create both HTML and PNG (see note below if not)
         html_path, png_path = visualize_attack_graph(G, output_html="attack_graph.html", image_out="attack_graph.png")
         if png_path and os.path.exists(png_path):
             elements.append(Paragraph("Attack Graph: AI Attack Relationships", styles["Heading4"]))
             elements.append(Image(png_path, width=400, height=220))
             elements.append(Spacer(1, 5))
             elements.append(Paragraph("For interactive exploration, open attack_graph.html in a browser.", styles["Normal"]))
+        else:
+            elements.append(Paragraph("<font color='red'>Attack graph image missing or failed.</font>", styles["Normal"]))
     except Exception as e:
         elements.append(Paragraph(f"<font color='red'>Attack graph error: {e}</font>", styles["Normal"]))
 
