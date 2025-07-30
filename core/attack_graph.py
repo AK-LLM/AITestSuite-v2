@@ -59,7 +59,7 @@ def visualize_attack_graph(G, output_html="attack_graph.html", image_out="attack
 
     return output_html, image_out if png_ok else None
 
-# Usage example (for manual testing, not for your reporting pipeline)
+# Usage example (for manual testing)
 if __name__ == "__main__":
     log_path = os.path.join(os.path.dirname(__file__), "..", "logs", "attack_results.json")
     if os.path.exists(log_path):
