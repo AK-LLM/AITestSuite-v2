@@ -20,3 +20,4 @@ psutil
 reportlab
 matplotlib
 # ml-privacy-meter  <-- REMOVED until later
+pyvis
