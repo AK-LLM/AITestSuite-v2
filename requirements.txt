@@ -19,5 +19,6 @@ docker
 psutil
 reportlab
 matplotlib
+networkx
 # ml-privacy-meter  <-- REMOVED until later
 pyvis
