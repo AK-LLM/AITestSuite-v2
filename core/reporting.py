@@ -10,6 +10,9 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import matplotlib.pyplot as plt
 
+# Attack graph integration
+from core.attack_graph import build_attack_graph, visualize_attack_graph
+
 def plot_risk_chart(risk_counts):
     fig, ax = plt.subplots(figsize=(3,3))
     risks = list(risk_counts.keys())
@@ -25,12 +28,24 @@ def plot_risk_chart(risk_counts):
     buf.seek(0)
     return buf
 
+def ensure_fields(row):
+    """Guarantee remediation and references always present for all rows."""
+    if "remediation" not in row or not row["remediation"]:
+        row["remediation"] = "Refer to plugin guidance and LLM vendor docs."
+    if "references" not in row or not row["references"]:
+        row["references"] = "https://llm-attacks.org, https://owasp.org/www-project-top-ten/"
+    return row
+
 def generate_report(results, filetype="pdf"):
     df = pd.DataFrame(results)
     required = ["name","description","category","risk","risk_score","success","details","remediation","references"]
     for col in required:
         if col not in df.columns:
             df[col] = ""
+
+    # Guarantee fields for every row
+    df = df.apply(ensure_fields, axis=1)
+
     risk_counts = dict(Counter(df["risk"]))
     cat_counts = dict(Counter(df["category"]))
     plugin_counts = dict(Counter(df["name"]))
@@ -62,6 +77,22 @@ def generate_report(results, filetype="pdf"):
             elements.append(Spacer(1, 5))
     except Exception as e:
         elements.append(Paragraph(f"<font color='red'>Risk chart error: {e}</font>", styles["Normal"]))
+
+    # --- Attack graph static image (PNG) ---
+    try:
+        # Create and embed the attack graph as PNG
+        from core.attack_graph import build_attack_graph, visualize_attack_graph
+        G = build_attack_graph(results)
+        # This should create both HTML and PNG (see note below if not)
+        html_path, png_path = visualize_attack_graph(G, output_html="attack_graph.html", image_out="attack_graph.png")
+        if png_path and os.path.exists(png_path):
+            elements.append(Paragraph("Attack Graph: AI Attack Relationships", styles["Heading4"]))
+            elements.append(Image(png_path, width=400, height=220))
+            elements.append(Spacer(1, 5))
+            elements.append(Paragraph("For interactive exploration, open attack_graph.html in a browser.", styles["Normal"]))
+    except Exception as e:
+        elements.append(Paragraph(f"<font color='red'>Attack graph error: {e}</font>", styles["Normal"]))
+
     # Benchmarks/explanation
     elements.append(Paragraph("<b>Benchmarks (Industry):</b>", styles["Heading4"]))
     elements.append(Paragraph(
