@@ -2,50 +2,55 @@ import os
 import importlib.util
 import traceback
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
-
-def is_safe_plugin(plugin_path):
-    try:
-        with open(plugin_path, "r", encoding="utf-8", errors="ignore") as f:
-            code = f.read()
-        # Simple static checks (block dangerous modules)
-        banned = ["os.system", "subprocess", "eval(", "exec(", "popen", "open(", "import socket", "import pickle"]
-        for bad in banned:
-            if bad in code: return False
-        return True
-    except Exception:
-        return False
+PLUGIN_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))
 
 def discover_plugins():
     plugins = []
     for fname in os.listdir(PLUGIN_FOLDER):
-        if not fname.endswith(".py") or fname.startswith("_"):
-            continue
-        path = os.path.join(PLUGIN_FOLDER, fname)
-        if not is_safe_plugin(path):
-            print(f"[plugin_loader] SKIPPED UNSAFE: {fname}")
-            continue
-        try:
-            spec = importlib.util.spec_from_file_location(fname[:-3], path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            # Require: METADATA, run(scenario, endpoint, api_key, mode)
-            if not hasattr(mod, "METADATA") or not hasattr(mod, "run"):
-                print(f"[plugin_loader] SKIP: {fname} missing METADATA/run()")
-                continue
-            plugins.append({"name": fname[:-3], "module": mod})
-        except Exception as e:
-            print(f"[plugin_loader] FAILED: {fname} {e}")
-            traceback.print_exc()
+        # Ignore non-Python or private/dunder files
+        if fname.endswith(".py") and not fname.startswith("_"):
+            plugin_path = os.path.join(PLUGIN_FOLDER, fname)
+            plugin_name = fname[:-3]
+            try:
+                spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                # Metadata Extraction
+                meta = getattr(mod, "METADATA", {})
+                plugin_info = {
+                    "name": plugin_name,
+                    "module": mod,
+                    "meta": meta,
+                    "version": meta.get("version", "1.0"),
+                    "description": meta.get("description", ""),
+                    "tags": meta.get("tags", []),
+                    "risk": meta.get("risk", "Unknown"),
+                    "author": meta.get("author", ""),
+                    "dependencies": meta.get("dependencies", []),
+                    "capabilities": meta.get("capabilities", []),
+                    "safe": meta.get("safe", None),  # For audit, not for filtering
+                    "file": fname,
+                    "load_error": None
+                }
+                plugins.append(plugin_info)
+                print(f"[plugin_loader] LOADED: {fname}")
+            except Exception as e:
+                plugins.append({
+                    "name": plugin_name,
+                    "module": None,
+                    "meta": {},
+                    "version": "ERROR",
+                    "description": "",
+                    "tags": [],
+                    "risk": "ImportError",
+                    "author": "",
+                    "dependencies": [],
+                    "capabilities": [],
+                    "safe": None,
+                    "file": fname,
+                    "load_error": f"{e}\n{traceback.format_exc()}"
+                })
+                print(f"[plugin_loader] FAILED: {fname} with error: {e}")
+                print(traceback.format_exc())
+    print(f"[plugin_loader] Total plugins loaded: {len(plugins)}")
     return plugins
-
-# OPTIONAL: Script loader (if you want to expose /scripts/ to the UI)
-def discover_scripts():
-    SCRIPTS_FOLDER = os.path.join(PROJECT_ROOT, "scripts")
-    scripts = []
-    if not os.path.exists(SCRIPTS_FOLDER): return scripts
-    for fname in os.listdir(SCRIPTS_FOLDER):
-        if fname.endswith(".py"):
-            scripts.append(fname)
-    return scripts
