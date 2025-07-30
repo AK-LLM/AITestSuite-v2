@@ -28,7 +28,7 @@ def discover_plugins():
                     "author": meta.get("author", ""),
                     "dependencies": meta.get("dependencies", []),
                     "capabilities": meta.get("capabilities", []),
-                    "safe": meta.get("safe", None),  # For audit, not for filtering
+                    "safe": meta.get("safe", None),  # For audit/report only, not for filtering
                     "file": fname,
                     "load_error": None
                 }
