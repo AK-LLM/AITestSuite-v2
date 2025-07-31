@@ -9,10 +9,10 @@ name: AI Suite AutoTest
 #    - cron: '0 4 * * *'  # Runs daily at 4:00 UTC
 #  workflow_dispatch:
 
-jobs:
-  full-redteam-suite:
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
+# jobs:
+#  full-redteam-suite:
+#    runs-on: ubuntu-latest
+#    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v3
