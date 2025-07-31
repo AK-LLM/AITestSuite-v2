@@ -242,7 +242,7 @@ report_blocks = [
 ]
 for key, label in report_blocks:
     results = st.session_state.get(key, [])
-    if results:
+    if results and isinstance(results, list) and len(results) > 0:
         st.subheader(f"Results for {label}")
         st.dataframe(results, key=f"{label}_df")
         st.download_button(
@@ -257,5 +257,34 @@ for key, label in report_blocks:
             file_name=f"{label.replace(' ', '_').lower()}_results.pdf",
             key=f"{label}_pdf"
         )
+
+# DEBUG BLOCK: Shows result presence and first row for each option
+st.markdown("----")
+st.subheader("Debug: Results present in session_state?")
+for key in ['opt1_results', 'opt2_results', 'opt3_results', 'opt4_results']:
+    val = st.session_state.get(key, None)
+    st.write(f"{key}: {type(val)} len={len(val) if val else 0}")
+    if val and isinstance(val, list) and len(val) > 0:
+        st.write(val[:1])  # Show the first result for verification
+
+if st.session_state.get('opt1_results'):
+    st.write("Direct download test (Option 1):")
+    try:
+        st.download_button(
+            "Direct JSON Download (Option 1)",
+            data=generate_report(st.session_state['opt1_results'], "json"),
+            file_name="debug_option1.json"
+        )
+        st.download_button(
+            "Direct PDF Download (Option 1)",
+            data=generate_report(st.session_state['opt1_results'], "pdf"),
+            file_name="debug_option1.pdf"
+        )
+    except Exception as e:
+        st.write(f"Download error: {e}")
+else:
+    st.write("No Option 1 results to download (debug)")
+
+st.markdown("----")
 
 st.info("All options are fully independent and can be used in any combination. Deluxe reporting is always available after runs. For any errors or missing data, see the logs or generated reports for troubleshooting.")
