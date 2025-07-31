@@ -38,7 +38,7 @@ def ensure_fields(row):
 
 def generate_report(results, filetype="pdf"):
     df = pd.DataFrame(results)
-    required = ["name","description","category","risk","risk_score","success","details","remediation","references"]
+    required = ["name","description","category","risk","risk_score","success","details","remediation","references","scenario"]
     for col in required:
         if col not in df.columns:
             df[col] = ""
@@ -88,7 +88,7 @@ def generate_report(results, filetype="pdf"):
             elements.append(Spacer(1, 5))
             elements.append(Paragraph("For interactive exploration, open attack_graph.html in a browser.", styles["Normal"]))
         else:
-            elements.append(Paragraph("<font color='red'>Attack graph image missing or failed.</font>", styles["Normal"]))
+            elements.append(Paragraph("<font color='red'>Attack graph image missing or failed.</font>", styles="Normal"))
     except Exception as e:
         elements.append(Paragraph(f"<font color='red'>Attack graph error: {e}</font>", styles["Normal"]))
 
@@ -107,6 +107,7 @@ def generate_report(results, filetype="pdf"):
         refs = row["references"]
         if isinstance(refs, list): refs = ", ".join(refs)
         elif refs is None: refs = ""
+        risk_color = "#f4cccc" if str(row["risk"]).lower() in ["high","critical"] else "#fff"
         # Wrap/truncate long fields
         details_short = (str(row["details"])[:120] + " ...") if len(str(row["details"]))>120 else str(row["details"])
         remediation_short = (str(row.get("remediation",""))[:80] + " ...") if len(str(row.get("remediation","")))>80 else str(row.get("remediation",""))
