@@ -126,4 +126,136 @@ if run_opt1 and scenarios_opt1:
     for scenario in scenarios_opt1:
         for plug in plugins:
             try:
-                result =
+                result = plug["module"].run(
+                    scenario,
+                    endpoint if mode.startswith("Live") else "demo",
+                    api_key,
+                    mode,
+                )
+                meta = dict(plug["module"].METADATA)
+                meta.update(result)
+                meta["name"] = plug["name"]
+                meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
+                opt1_results.append(meta)
+            except Exception as e:
+                opt1_results.append({
+                    "name": plug["name"],
+                    "scenario": scenario.get("name", "Unknown"),
+                    "risk": "Error",
+                    "details": f"Failed: {e}",
+                })
+
+run_opt2 = st.button("Run Uploaded Scenarios (Option 2)", key="run2", disabled=not scenarios_opt2)
+opt2_results = []
+if run_opt2 and scenarios_opt2:
+    plugins = discover_plugins()
+    for scenario in scenarios_opt2:
+        for plug in plugins:
+            try:
+                result = plug["module"].run(
+                    scenario,
+                    endpoint if mode.startswith("Live") else "demo",
+                    api_key,
+                    mode,
+                )
+                meta = dict(plug["module"].METADATA)
+                meta.update(result)
+                meta["name"] = plug["name"]
+                meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
+                opt2_results.append(meta)
+            except Exception as e:
+                opt2_results.append({
+                    "name": plug["name"],
+                    "scenario": scenario.get("name", "Unknown"),
+                    "risk": "Error",
+                    "details": f"Failed: {e}",
+                })
+
+run_opt3 = st.button("Run Selected Plugins on All Scenarios (Option 3)", key="run3", disabled=not selected_plugins or not all_scenarios)
+opt3_results = []
+if run_opt3 and selected_plugins and all_scenarios:
+    for scenario in all_scenarios:
+        for plug in plugins:
+            if plug["name"] not in selected_plugins:
+                continue
+            try:
+                result = plug["module"].run(
+                    scenario,
+                    endpoint if mode.startswith("Live") else "demo",
+                    api_key,
+                    mode,
+                )
+                meta = dict(plug["module"].METADATA)
+                meta.update(result)
+                meta["name"] = plug["name"]
+                meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
+                opt3_results.append(meta)
+            except Exception as e:
+                opt3_results.append({
+                    "name": plug["name"],
+                    "scenario": scenario.get("name", "Unknown"),
+                    "risk": "Error",
+                    "details": f"Failed: {e}",
+                })
+
+run_opt4 = st.button("Run ALL (Option 4)", key="run4", disabled=not all_scenarios)
+opt4_results = []
+if run_opt4 and all_scenarios:
+    plugins = discover_plugins()
+    for scenario in all_scenarios:
+        for plug in plugins:
+            try:
+                result = plug["module"].run(
+                    scenario,
+                    endpoint if mode.startswith("Live") else "demo",
+                    api_key,
+                    mode,
+                )
+                meta = dict(plug["module"].METADATA)
+                meta.update(result)
+                meta["name"] = plug["name"]
+                meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
+                opt4_results.append(meta)
+            except Exception as e:
+                opt4_results.append({
+                    "name": plug["name"],
+                    "scenario": scenario.get("name", "Unknown"),
+                    "risk": "Error",
+                    "details": f"Failed: {e}",
+                })
+
+# ---- Reporting: Revised section, robust for all options ----
+for opt_key, opt_results in [
+    ("opt1_results", opt1_results),
+    ("opt2_results", opt2_results),
+    ("opt3_results", opt3_results),
+    ("opt4_results", opt4_results)
+]:
+    if opt_results:
+        st.session_state[opt_key] = opt_results
+
+report_blocks = [
+    ('opt1_results', 'Option 1'),
+    ('opt2_results', 'Option 2'),
+    ('opt3_results', 'Option 3'),
+    ('opt4_results', 'Option 4'),
+]
+for key, label in report_blocks:
+    results = st.session_state.get(key, [])
+    if results:
+        st.subheader(f"Results for {label}")
+        st.dataframe(results, key=f"{label}_df")
+        st.download_button(
+            f"Download {label} Results (JSON)",
+            data=generate_report(results, "json"),
+            file_name=f"{label.replace(' ', '_').lower()}_results.json",
+            key=f"{label}_json"
+        )
+        st.download_button(
+            f"Download {label} Results (PDF)",
+            data=generate_report(results, "pdf"),
+            file_name=f"{label.replace(' ', '_').lower()}_results.pdf",
+            key=f"{label}_pdf"
+        )
+
+st.info("All options are fully independent and can be used in any combination. Deluxe reporting is always available after runs. For any errors or missing data, see the logs or generated reports for troubleshooting.")
