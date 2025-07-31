@@ -13,6 +13,7 @@ import subprocess
 from core.plugin_loader import discover_plugins
 from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
+from core import fitness_campaign
 
 # --- FOLDER CONFIG ---
 SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
@@ -25,7 +26,7 @@ st.set_page_config(page_title="AI Test Suite v2 (Max)", layout="wide")
 st.title("🛡️ AI Test Suite v2 (Max)")
 st.caption("The most extreme, modular AI suite.")
 
-# --- AUTO-UPDATE SUITE (Feeds, Mutations, Polyglots) ---
+# --- AUTO-UPDATE SUITE (Feeds, Mutations, Polyglots, Zero-Day, Plugins, Scoreboard) ---
 def run_suite_refresh():
     # 1. Live threat feed ingest
     ingest_script = os.path.join(PROJECT_ROOT, "live_feed_ingest", "fetch_and_parse_feeds.py")
@@ -39,11 +40,23 @@ def run_suite_refresh():
     polyglot_script = os.path.join(PROJECT_ROOT, "polyglot_chains", "auto_polyglot_generator.py")
     if os.path.exists(polyglot_script):
         subprocess.run([sys.executable, polyglot_script])
+    # 4. Zero-Day Harvester (NEW)
+    harvester_script = os.path.join(PROJECT_ROOT, "core", "zero_day_harvester.py")
+    if os.path.exists(harvester_script):
+        subprocess.run([sys.executable, harvester_script])
+    # 5. Auto-Plugin Writer (NEW)
+    auto_plugin_writer = os.path.join(PROJECT_ROOT, "core", "auto_plugin_writer.py")
+    if os.path.exists(auto_plugin_writer):
+        subprocess.run([sys.executable, auto_plugin_writer])
+    # 6. Plugin Scoreboard (NEW)
+    plugin_scoreboard = os.path.join(PROJECT_ROOT, "core", "plugin_scoreboard.py")
+    if os.path.exists(plugin_scoreboard):
+        subprocess.run([sys.executable, plugin_scoreboard])
 
-if st.sidebar.button("🔄 Full Suite Auto-Update (Feeds + Mutations + Polyglots)", key="suite_refresh"):
-    st.info("Updating suite... Pulling live feeds, regenerating attacks, and building polyglot payloads.")
+if st.sidebar.button("🔄 Full Suite Auto-Update (Feeds + Mutations + Polyglots + Zero-Day + Auto-Plugins + Scoreboard)", key="suite_refresh"):
+    st.info("Updating suite... Pulling live feeds, regenerating attacks, building polyglots, harvesting zero-days, writing plugins, and updating scoreboard.")
     run_suite_refresh()
-    st.success("Suite refresh complete! All exploits, mutations, and polyglots are ready to run.")
+    st.success("Suite refresh complete! All exploits, mutations, polyglots, zero-day, and plugins are ready to run.")
 
 # --- MODE SELECT ---
 mode = st.sidebar.radio("Mode:", ["Demo (offline/mock)", "Live (real API)"], index=0, key="mode_radio")
@@ -82,43 +95,6 @@ for fname in selected_builtins:
     except Exception as e:
         st.warning(f"{fname} failed to load: {e}")
 
-# ---- Option 2: Upload custom scenario JSON(s)
-st.header("2️⃣ Or upload custom scenario JSON(s):")
-uploads = st.file_uploader("Upload scenario files", type="json", accept_multiple_files=True, key="file_uploader")
-scenarios_opt2 = []
-upload_errors = []
-if uploads:
-    for up in uploads:
-        try:
-            js = json.load(up)
-            if isinstance(js, dict): scenarios_opt2.append(js)
-            elif isinstance(js, list): scenarios_opt2.extend(js)
-        except Exception as e:
-            upload_errors.append(up.name)
-if upload_errors:
-    st.warning(f"Malformed scenario file(s): {', '.join(upload_errors)} (skipped)")
-
-# ---- Option 3: Select plugins/tools to run (all by default, multi)
-st.header("3️⃣ Select plugins/tools to run (all by default, multi):")
-plugins = discover_plugins()
-plugin_names = [p["name"] for p in plugins]
-selected_plugins = st.multiselect("Choose plugins (all by default):", plugin_names, default=plugin_names, key="select_plugins")
-all_scenarios = []
-try:
-    for fname in os.listdir(SCENARIO_FOLDER):
-        if fname.endswith(".json"):
-            with open(os.path.join(SCENARIO_FOLDER, fname), "r", encoding="utf-8") as f:
-                js = json.load(f)
-                if isinstance(js, dict): all_scenarios.append(js)
-                elif isinstance(js, list): all_scenarios.extend(js)
-except Exception:
-    pass
-
-# ---- Option 4: Run all plugins on all scenarios
-st.header("4️⃣ Run ALL plugins on ALL built-in scenarios (full suite):")
-st.markdown("This will run **every plugin on every built-in scenario** in your library. ⚡️ **Heavy!** ⚡️")
-
-# ---- Option Runs (preserved, robust)
 run_opt1 = st.button("Run Selected Library Scenarios (Option 1)", key="run1", disabled=not scenarios_opt1)
 opt1_results = []
 if run_opt1 and scenarios_opt1:
@@ -145,6 +121,22 @@ if run_opt1 and scenarios_opt1:
                     "details": f"Failed: {e}",
                 })
 
+# ---- Option 2: Upload custom scenario JSON(s)
+st.header("2️⃣ Or upload custom scenario JSON(s):")
+uploads = st.file_uploader("Upload scenario files", type="json", accept_multiple_files=True, key="file_uploader")
+scenarios_opt2 = []
+upload_errors = []
+if uploads:
+    for up in uploads:
+        try:
+            js = json.load(up)
+            if isinstance(js, dict): scenarios_opt2.append(js)
+            elif isinstance(js, list): scenarios_opt2.extend(js)
+        except Exception as e:
+            upload_errors.append(up.name)
+if upload_errors:
+    st.warning(f"Malformed scenario file(s): {', '.join(upload_errors)} (skipped)")
+
 run_opt2 = st.button("Run Uploaded Scenarios (Option 2)", key="run2", disabled=not scenarios_opt2)
 opt2_results = []
 if run_opt2 and scenarios_opt2:
@@ -170,6 +162,22 @@ if run_opt2 and scenarios_opt2:
                     "risk": "Error",
                     "details": f"Failed: {e}",
                 })
+
+# ---- Option 3: Select plugins/tools to run (all by default, multi)
+st.header("3️⃣ Select plugins/tools to run (all by default, multi):")
+plugins = discover_plugins()
+plugin_names = [p["name"] for p in plugins]
+selected_plugins = st.multiselect("Choose plugins (all by default):", plugin_names, default=plugin_names, key="select_plugins")
+all_scenarios = []
+try:
+    for fname in os.listdir(SCENARIO_FOLDER):
+        if fname.endswith(".json"):
+            with open(os.path.join(SCENARIO_FOLDER, fname), "r", encoding="utf-8") as f:
+                js = json.load(f)
+                if isinstance(js, dict): all_scenarios.append(js)
+                elif isinstance(js, list): all_scenarios.extend(js)
+except Exception:
+    pass
 
 run_opt3 = st.button("Run Selected Plugins on All Scenarios (Option 3)", key="run3", disabled=not selected_plugins or not all_scenarios)
 opt3_results = []
@@ -198,93 +206,65 @@ if run_opt3 and selected_plugins and all_scenarios:
                     "details": f"Failed: {e}",
                 })
 
-run_opt4 = st.button("Run ALL (Option 4)", key="run4", disabled=not all_scenarios)
+# ---- Option 4: Extreme Adaptive Campaign (All plugins, all scenarios, mutations, zero-day, self-learning)
+st.header("4️⃣ Extreme Campaign: All Plugins, Scenarios, Mutations, Zero-Day, and Self-Learning")
+run_opt4 = st.button("Run Extreme Campaign (Option 4)", key="run4")
 opt4_results = []
-if run_opt4 and all_scenarios:
-    plugins = discover_plugins()
-    for scenario in all_scenarios:
-        for plug in plugins:
-            try:
-                result = plug["module"].run(
-                    scenario,
-                    endpoint if mode.startswith("Live") else "demo",
-                    api_key,
-                    mode,
-                )
-                meta = dict(plug["module"].METADATA)
-                meta.update(result)
-                meta["name"] = plug["name"]
-                meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
-                opt4_results.append(meta)
-            except Exception as e:
-                opt4_results.append({
-                    "name": plug["name"],
-                    "scenario": scenario.get("name", "Unknown"),
-                    "risk": "Error",
-                    "details": f"Failed: {e}",
-                })
+if run_opt4:
+    # Load all scenarios (including zero-days if available)
+    scenarios = []
+    for fname in os.listdir(SCENARIO_FOLDER):
+        if fname.endswith(".json"):
+            with open(os.path.join(SCENARIO_FOLDER, fname), "r", encoding="utf-8") as f:
+                js = json.load(f)
+                if isinstance(js, dict): scenarios.append(js)
+                elif isinstance(js, list): scenarios.extend(js)
+    # Inject zero-day payloads as scenarios
+    zero_day_file = os.path.join(PAYLOAD_FOLDER, "zero_day_payloads.json")
+    if os.path.exists(zero_day_file):
+        with open(zero_day_file, "r", encoding="utf-8") as f:
+            zd_payloads = json.load(f)
+            for zd in zd_payloads:
+                if isinstance(zd, dict) and "prompt" in zd:
+                    scenarios.append({"name": zd.get("name", "zero_day"), "prompt": zd["prompt"]})
+    endpoint = st.session_state.get("api_endpoint", "demo")
+    api_key = st.session_state.get("api_key", "")
+    mode = st.session_state.get("mode_radio", "Demo")
+    with st.spinner("Running full adaptive campaign..."):
+        opt4_results = fitness_campaign.run_fitness_campaign(
+            scenarios, endpoint, api_key, mode,
+            generations=3, mutate_rounds=2
+        )
+    st.success(f"Extreme campaign complete. {len(opt4_results)} results.")
+    # Save to log and display in Streamlit
+    with open(os.path.join("logs", "extreme_campaign_results.json"), "w") as f:
+        json.dump(opt4_results, f, indent=2)
+    st.dataframe(opt4_results)
+    st.download_button(
+        "Download Extreme Campaign Results (JSON)",
+        data=json.dumps(opt4_results, indent=2),
+        file_name="extreme_campaign_results.json"
+    )
+    st.download_button(
+        "Download Extreme Campaign Results (PDF)",
+        data=generate_report(opt4_results, "pdf"),
+        file_name="extreme_campaign_results.pdf"
+    )
 
-# ---- Reporting: Revised section, robust for all options ----
-for opt_key, opt_results in [
-    ("opt1_results", opt1_results),
-    ("opt2_results", opt2_results),
-    ("opt3_results", opt3_results),
-    ("opt4_results", opt4_results)
+# ---- Reporting: Consolidate and let user download for ALL OPTIONS
+for results, label in [
+    (opt1_results, "Option 1"),
+    (opt2_results, "Option 2"),
+    (opt3_results, "Option 3"),
 ]:
-    if opt_results:
-        st.session_state[opt_key] = opt_results
-
-report_blocks = [
-    ('opt1_results', 'Option 1'),
-    ('opt2_results', 'Option 2'),
-    ('opt3_results', 'Option 3'),
-    ('opt4_results', 'Option 4'),
-]
-for key, label in report_blocks:
-    results = st.session_state.get(key, [])
-    if results and isinstance(results, list) and len(results) > 0:
+    if results:
         st.subheader(f"Results for {label}")
         st.dataframe(results, key=f"{label}_df")
-        st.download_button(
-            f"Download {label} Results (JSON)",
-            data=generate_report(results, "json"),
-            file_name=f"{label.replace(' ', '_').lower()}_results.json",
-            key=f"{label}_json"
-        )
-        st.download_button(
-            f"Download {label} Results (PDF)",
-            data=generate_report(results, "pdf"),
-            file_name=f"{label.replace(' ', '_').lower()}_results.pdf",
-            key=f"{label}_pdf"
-        )
+        st.download_button(f"Download {label} Results (JSON)", data=generate_report(results, "json"), file_name=f"{label}_results.json", key=f"{label}_json")
+        st.download_button(f"Download {label} Results (PDF)", data=generate_report(results, "pdf"), file_name=f"{label}_results.pdf", key=f"{label}_pdf")
 
-# DEBUG BLOCK: Shows result presence and first row for each option
-st.markdown("----")
-st.subheader("Debug: Results present in session_state?")
-for key in ['opt1_results', 'opt2_results', 'opt3_results', 'opt4_results']:
-    val = st.session_state.get(key, None)
-    st.write(f"{key}: {type(val)} len={len(val) if val else 0}")
-    if val and isinstance(val, list) and len(val) > 0:
-        st.write(val[:1])  # Show the first result for verification
-
-if st.session_state.get('opt1_results'):
-    st.write("Direct download test (Option 1):")
-    try:
-        st.download_button(
-            "Direct JSON Download (Option 1)",
-            data=generate_report(st.session_state['opt1_results'], "json"),
-            file_name="debug_option1.json"
-        )
-        st.download_button(
-            "Direct PDF Download (Option 1)",
-            data=generate_report(st.session_state['opt1_results'], "pdf"),
-            file_name="debug_option1.pdf"
-        )
-    except Exception as e:
-        st.write(f"Download error: {e}")
-else:
-    st.write("No Option 1 results to download (debug)")
-
-st.markdown("----")
-
-st.info("All options are fully independent and can be used in any combination. Deluxe reporting is always available after runs. For any errors or missing data, see the logs or generated reports for troubleshooting.")
+st.info(
+    "All options are fully independent and can be used in any combination. "
+    "Deluxe reporting is always available after runs, and the Extreme Campaign includes live mutations, zero-day payloads, and self-learning. "
+    "For any errors or missing data, see the logs or generated reports for troubleshooting."
+)
