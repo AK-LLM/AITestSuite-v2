@@ -4,14 +4,50 @@ import random
 import importlib
 import traceback
 import datetime
+import time
 
 from core.plugin_loader import discover_plugins
+
+# --- SUPABASE Optional Sync ---
+SUPABASE_ENABLED = False
+supabase = None
+try:
+    from supabase import create_client
+    SUPABASE_URL = os.environ.get("SUPABASE_URL")
+    SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+    if SUPABASE_URL and SUPABASE_KEY:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        SUPABASE_ENABLED = True
+    else:
+        print("[fitness_campaign] Supabase not configured. Set SUPABASE_URL and SUPABASE_KEY.")
+except ImportError:
+    print("[fitness_campaign] Supabase client not installed. Results will NOT sync to Supabase.")
+
+def supabase_sync_result(result):
+    if not SUPABASE_ENABLED or supabase is None:
+        return
+    # Prepare record matching your 'results' table schema
+    db_row = {
+        "scenario_name": result.get("scenario", ""),
+        "plugin_name": result.get("name", ""),
+        "risk": result.get("risk", ""),
+        "risk_score": result.get("risk_score", None),
+        "success": result.get("success", None),
+        "details": result.get("details", ""),
+        "remediation": result.get("remediation", ""),
+        "references_links": result.get("references", []) if isinstance(result.get("references"), list) else [result.get("references", "")],
+        "run_at": result.get("run_time", datetime.datetime.utcnow().isoformat()),
+    }
+    # plugin_id, scenario_id left out unless you want to join by uuid
+    try:
+        supabase.table("results").upsert(db_row).execute()
+    except Exception as e:
+        print(f"[fitness_campaign] Supabase sync failed: {e}")
 
 # Fitness log (legacy, not required but kept for audit)
 FITNESS_LOG = []
 
 def score_result(result):
-    # Reward: Success = 2, High/Critical Risk = 2, Mutation = 1, Failure = -2
     score = 0
     if result.get("success"): score += 2
     risk = str(result.get("risk", "")).lower()
@@ -21,7 +57,6 @@ def score_result(result):
     return score
 
 def mutate_scenario(scenario):
-    import unicodedata
     mutated = dict(scenario)
     name = scenario.get("name", "unnamed")
     mutation_type = random.choice(["unicode", "case", "whitespace", "reverse", "emoji", "obfuscate", "payload_flip", "alt_encoding", "zero_day"])
@@ -51,11 +86,9 @@ def mutate_scenario(scenario):
     return mutated
 
 def select_next_generation(results, top_k=10):
-    # Breed the next generation from the top performing attacks
     sorted_results = sorted(results, key=score_result, reverse=True)
     nextgen = []
     for res in sorted_results[:top_k]:
-        # If already mutated, keep as is; else mutate anew
         base = {
             "name": res.get("scenario", res.get("name", "unknown")),
             "prompt": res.get("prompt", ""),
@@ -67,8 +100,7 @@ def inject_zero_day_population(population, payload_path, limit=10):
     if os.path.exists(payload_path):
         with open(payload_path) as f:
             zero_days = json.load(f)
-        # Each zero-day is treated as a scenario
-        for zd in zero_days[:limit]:  # Up to N per generation
+        for zd in zero_days[:limit]:
             if isinstance(zd, dict) and "prompt" in zd:
                 zd_scen = {
                     "name": zd.get("name","zero_day"),
@@ -90,7 +122,6 @@ def run_fitness_campaign(
 ):
     if plugins is None:
         plugins = discover_plugins()
-
     all_results = []
     population = list(scenarios)
     for gen in range(generations):
@@ -110,15 +141,19 @@ def run_fitness_campaign(
                     meta["zero_day"] = scenario.get("zero_day", False)
                     meta["run_time"] = datetime.datetime.utcnow().isoformat()
                     gen_results.append(meta)
+                    # ---- SUPABASE SYNC ----
+                    supabase_sync_result(meta)
                 except Exception as e:
-                    gen_results.append({
+                    err_res = {
                         "name": plug["name"],
                         "scenario": scenario.get("name", "Unknown"),
                         "risk": "Error",
                         "details": f"Failed: {e}",
                         "generation": gen+1,
                         "run_time": datetime.datetime.utcnow().isoformat(),
-                    })
+                    }
+                    gen_results.append(err_res)
+                    supabase_sync_result(err_res)
         all_results.extend(gen_results)
         # Mutate and breed next generation
         nextgen = select_next_generation(gen_results, top_k=8)
@@ -135,14 +170,12 @@ def run_fitness_campaign(
         except Exception as e:
             print(f"[fitness_campaign] Could not log results: {e}")
     else:
-        # Default legacy log
         with open(os.path.join("logs", "fitness_log.json"), "w") as f:
             json.dump(all_results, f, indent=2)
     return all_results
 
 # CLI/test usage
 if __name__ == "__main__":
-    # Load base scenarios
     scenario_dir = os.path.join(os.path.dirname(__file__), "..", "scenarios")
     scenarios = []
     for fname in os.listdir(scenario_dir):
@@ -151,7 +184,6 @@ if __name__ == "__main__":
                 data = json.load(f)
                 if isinstance(data, dict): scenarios.append(data)
                 elif isinstance(data, list): scenarios.extend(data)
-    # Dummy creds/endpoint
     endpoint = "demo"
     api_key = ""
     mode = "Demo"
