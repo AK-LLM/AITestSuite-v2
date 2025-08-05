@@ -4,6 +4,41 @@ import traceback
 
 PLUGIN_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))
 
+# --- Optional: Supabase Sync ---
+SUPABASE_ENABLED = False
+supabase = None
+try:
+    from supabase import create_client
+    SUPABASE_URL = os.environ.get("SUPABASE_URL")
+    SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+    if SUPABASE_URL and SUPABASE_KEY:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        SUPABASE_ENABLED = True
+    else:
+        print("[plugin_loader] Supabase not configured. Set SUPABASE_URL and SUPABASE_KEY.")
+except ImportError:
+    print("[plugin_loader] Supabase client not installed. Plugins will NOT sync to Supabase.")
+
+def sync_plugin_to_supabase(plugin_info):
+    if not SUPABASE_ENABLED or supabase is None:
+        return
+    # Prepare DB row from plugin_info (exclude 'module', 'load_error', 'file')
+    db_row = {
+        "name": plugin_info.get("name"),
+        "version": plugin_info.get("version"),
+        "description": plugin_info.get("description"),
+        "tags": plugin_info.get("tags", []),
+        "author": plugin_info.get("author"),
+        "risk": plugin_info.get("risk"),
+        "dependencies": plugin_info.get("dependencies", []),
+        "capabilities": plugin_info.get("capabilities", []),
+        "safe": plugin_info.get("safe"),
+    }
+    try:
+        supabase.table("plugins").upsert(db_row).execute()
+    except Exception as e:
+        print(f"[plugin_loader] Supabase sync failed for {plugin_info.get('name')}: {e}")
+
 def discover_plugins():
     plugins = []
     for fname in os.listdir(PLUGIN_FOLDER):
@@ -34,6 +69,8 @@ def discover_plugins():
                 }
                 plugins.append(plugin_info)
                 print(f"[plugin_loader] LOADED: {fname}")
+                # --- Supabase Sync ---
+                sync_plugin_to_supabase(plugin_info)
             except Exception as e:
                 plugins.append({
                     "name": plugin_name,
