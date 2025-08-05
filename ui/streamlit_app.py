@@ -15,6 +15,9 @@ from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
 from core import fitness_campaign
 
+# --- Import the plugin sync utility ---
+from core.db_sync_plugins import sync_plugins_with_supabase
+
 # === (NEW) Supabase Config ===
 SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jpbuvxexmuzfsetslzon.supabase.co"
 SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwYnV2eGV4bXV6ZnNldHNsem9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjUzNjAsImV4cCI6MjA2OTk0MTM2MH0.ZDG3Hls_I5EUJw3kXYbp8g7ft-k1icYoh3W1rNDvpHw"
@@ -77,15 +80,13 @@ st.sidebar.markdown("---")
 if st.sidebar.button("🛡️ Supabase Sync", key="supabase_sync"):
     with st.spinner("Syncing plugins to Supabase..."):
         try:
-            # Import inside the function to avoid circular imports!
-            from core.db_sync_plugins import sync_plugins_with_supabase
-            num_synced, error = sync_plugins_with_supabase()
-            if error:
-                st.sidebar.error(f"Supabase Sync failed: {error}")
+            num_synced, msg = sync_plugins_with_supabase()
+            if msg:
+                st.sidebar.error(f"Supabase Sync failed: {msg}")
             else:
-                st.sidebar.success(f"Supabase Sync complete: {num_synced} plugins synced.")
+                st.sidebar.success(f"Supabase Sync: {num_synced} plugins synced.")
         except Exception as e:
-            st.sidebar.error(f"Supabase Sync failed: {e}")
+            st.sidebar.error(f"Supabase sync failed: {e}")
 
 st.sidebar.caption("All feeds are auto-processed. Panel updates after each ingestion or mutation run.")
 
@@ -98,27 +99,21 @@ st.caption("The most extreme, modular AI suite.")
 
 # --- AUTO-UPDATE SUITE (Feeds, Mutations, Polyglots, Zero-Day, Plugins, Scoreboard) ---
 def run_suite_refresh():
-    # 1. Live threat feed ingest
     ingest_script = os.path.join(PROJECT_ROOT, "live_feed_ingest", "fetch_and_parse_feeds.py")
     if os.path.exists(ingest_script):
         subprocess.run([sys.executable, ingest_script])
-    # 2. Orchestrator (self-learning, mutations)
     orchestrator_script = os.path.join(PROJECT_ROOT, "ai_brain", "auto_learning_orchestrator.py")
     if os.path.exists(orchestrator_script):
         subprocess.run([sys.executable, orchestrator_script])
-    # 3. Polyglot generator
     polyglot_script = os.path.join(PROJECT_ROOT, "polyglot_chains", "auto_polyglot_generator.py")
     if os.path.exists(polyglot_script):
         subprocess.run([sys.executable, polyglot_script])
-    # 4. Zero-Day Harvester (NEW)
     harvester_script = os.path.join(PROJECT_ROOT, "core", "zero_day_harvester.py")
     if os.path.exists(harvester_script):
         subprocess.run([sys.executable, harvester_script])
-    # 5. Auto-Plugin Writer (NEW)
     auto_plugin_writer = os.path.join(PROJECT_ROOT, "core", "auto_plugin_writer.py")
     if os.path.exists(auto_plugin_writer):
         subprocess.run([sys.executable, auto_plugin_writer])
-    # 6. Plugin Scoreboard (NEW)
     plugin_scoreboard = os.path.join(PROJECT_ROOT, "core", "plugin_scoreboard.py")
     if os.path.exists(plugin_scoreboard):
         subprocess.run([sys.executable, plugin_scoreboard])
@@ -143,7 +138,6 @@ try:
 except Exception:
     builtins = []
 
-# NEW: Select All button for Option 1 (bulk select)
 select_all = st.button("Select ALL scenarios in library", key="select_all_btn")
 if select_all and builtins:
     st.session_state["select_builtins"] = builtins
@@ -281,7 +275,6 @@ st.header("4️⃣ Extreme Campaign: All Plugins, Scenarios, Mutations, Zero-Day
 run_opt4 = st.button("Run Extreme Campaign (Option 4)", key="run4")
 opt4_results = []
 if run_opt4:
-    # Load all scenarios (including zero-days if available)
     scenarios = []
     for fname in os.listdir(SCENARIO_FOLDER):
         if fname.endswith(".json"):
@@ -289,7 +282,6 @@ if run_opt4:
                 js = json.load(f)
                 if isinstance(js, dict): scenarios.append(js)
                 elif isinstance(js, list): scenarios.extend(js)
-    # Inject zero-day payloads as scenarios
     zero_day_file = os.path.join(PAYLOAD_FOLDER, "zero_day_payloads.json")
     if os.path.exists(zero_day_file):
         with open(zero_day_file, "r", encoding="utf-8") as f:
@@ -306,7 +298,6 @@ if run_opt4:
             generations=3, mutate_rounds=2
         )
     st.success(f"Extreme campaign complete. {len(opt4_results)} results.")
-    # Save to log and display in Streamlit
     with open(os.path.join("logs", "extreme_campaign_results.json"), "w") as f:
         json.dump(opt4_results, f, indent=2)
     st.dataframe(opt4_results)
