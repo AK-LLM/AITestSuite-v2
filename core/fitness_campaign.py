@@ -3,10 +3,11 @@ import json
 import random
 import importlib
 import traceback
+import datetime
 
 from core.plugin_loader import discover_plugins
 
-# Fitness log
+# Fitness log (legacy, not required but kept for audit)
 FITNESS_LOG = []
 
 def score_result(result):
@@ -15,7 +16,7 @@ def score_result(result):
     if result.get("success"): score += 2
     risk = str(result.get("risk", "")).lower()
     if "high" in risk or "critical" in risk: score += 2
-    if result.get("mutation"): score += 1
+    if result.get("mutation") or result.get("mutation_type"): score += 1
     if "error" in risk: score -= 2
     return score
 
@@ -23,7 +24,7 @@ def mutate_scenario(scenario):
     import unicodedata
     mutated = dict(scenario)
     name = scenario.get("name", "unnamed")
-    mutation_type = random.choice(["unicode", "case", "whitespace", "reverse", "emoji"])
+    mutation_type = random.choice(["unicode", "case", "whitespace", "reverse", "emoji", "obfuscate", "payload_flip", "alt_encoding", "zero_day"])
     text = scenario.get("prompt", "")
     if mutation_type == "unicode":
         text = ''.join([c + '\u200b' for c in text])
@@ -35,9 +36,18 @@ def mutate_scenario(scenario):
         text = text[::-1]
     elif mutation_type == "emoji":
         text = text + " 🤖🔥"
+    elif mutation_type == "obfuscate":
+        text = text.replace("a", "@").replace("e", "3").replace("i", "1").replace("o", "0")
+    elif mutation_type == "payload_flip":
+        text = text.swapcase()
+    elif mutation_type == "alt_encoding":
+        text = text.encode("unicode_escape").decode()
+    elif mutation_type == "zero_day":
+        text = text + " [0DAY_"+str(random.randint(100,999))+"]"
     mutated["prompt"] = text
     mutated["name"] = f"{name}_MUT_{mutation_type}"
     mutated["mutation_type"] = mutation_type
+    mutated["mutated"] = True
     return mutated
 
 def select_next_generation(results, top_k=10):
@@ -45,17 +55,47 @@ def select_next_generation(results, top_k=10):
     sorted_results = sorted(results, key=score_result, reverse=True)
     nextgen = []
     for res in sorted_results[:top_k]:
-        if "scenario" in res:
-            base = {"name": res["scenario"], "prompt": res.get("prompt", "")}
-            nextgen.append(mutate_scenario(base))
+        # If already mutated, keep as is; else mutate anew
+        base = {
+            "name": res.get("scenario", res.get("name", "unknown")),
+            "prompt": res.get("prompt", ""),
+        }
+        nextgen.append(mutate_scenario(base))
     return nextgen
 
-def run_fitness_campaign(scenarios, endpoint, api_key, mode, generations=3, mutate_rounds=2):
-    plugins = discover_plugins()
+def inject_zero_day_population(population, payload_path, limit=10):
+    if os.path.exists(payload_path):
+        with open(payload_path) as f:
+            zero_days = json.load(f)
+        # Each zero-day is treated as a scenario
+        for zd in zero_days[:limit]:  # Up to N per generation
+            if isinstance(zd, dict) and "prompt" in zd:
+                zd_scen = {
+                    "name": zd.get("name","zero_day"),
+                    "prompt": zd["prompt"],
+                    "zero_day": True
+                }
+                population.append(mutate_scenario(zd_scen))
+    return population
+
+def run_fitness_campaign(
+    scenarios,
+    endpoint,
+    api_key,
+    mode,
+    generations=3,
+    mutate_rounds=2,
+    plugins=None,
+    log_path=None
+):
+    if plugins is None:
+        plugins = discover_plugins()
+
     all_results = []
     population = list(scenarios)
     for gen in range(generations):
         gen_results = []
+        print(f"[fitness_campaign] Generation {gen+1} starting, pop: {len(population)}")
         for scenario in population:
             for plug in plugins:
                 try:
@@ -64,6 +104,11 @@ def run_fitness_campaign(scenarios, endpoint, api_key, mode, generations=3, muta
                     meta.update(result)
                     meta["name"] = plug["name"]
                     meta["scenario"] = scenario.get("name") or scenario.get("scenario_id", "N/A")
+                    meta["generation"] = gen+1
+                    meta["mutated"] = scenario.get("mutated", False)
+                    meta["mutation_type"] = scenario.get("mutation_type", None)
+                    meta["zero_day"] = scenario.get("zero_day", False)
+                    meta["run_time"] = datetime.datetime.utcnow().isoformat()
                     gen_results.append(meta)
                 except Exception as e:
                     gen_results.append({
@@ -71,23 +116,28 @@ def run_fitness_campaign(scenarios, endpoint, api_key, mode, generations=3, muta
                         "scenario": scenario.get("name", "Unknown"),
                         "risk": "Error",
                         "details": f"Failed: {e}",
+                        "generation": gen+1,
+                        "run_time": datetime.datetime.utcnow().isoformat(),
                     })
         all_results.extend(gen_results)
         # Mutate and breed next generation
-        population = select_next_generation(gen_results, top_k=8)
+        nextgen = select_next_generation(gen_results, top_k=8)
         # Optionally, inject new zero-day payloads from harvester
         zd_path = os.path.join("payloads", "zero_day_payloads.json")
-        if os.path.exists(zd_path):
-            with open(zd_path) as f:
-                zero_days = json.load(f)
-            # Each zero-day is treated as a scenario
-            for zd in zero_days[:10]:  # Up to 10 per generation
-                if isinstance(zd, dict) and "prompt" in zd:
-                    zd_scen = {"name": zd.get("name","zero_day"), "prompt": zd["prompt"]}
-                    population.append(mutate_scenario(zd_scen))
+        nextgen = inject_zero_day_population(nextgen, zd_path, limit=10)
+        population = nextgen
+        time.sleep(0.05)
     # Log fitness for audit
-    with open(os.path.join("logs", "fitness_log.json"), "w") as f:
-        json.dump(all_results, f, indent=2)
+    if log_path:
+        try:
+            with open(log_path, "w") as f:
+                json.dump(all_results, f, indent=2)
+        except Exception as e:
+            print(f"[fitness_campaign] Could not log results: {e}")
+    else:
+        # Default legacy log
+        with open(os.path.join("logs", "fitness_log.json"), "w") as f:
+            json.dump(all_results, f, indent=2)
     return all_results
 
 # CLI/test usage
