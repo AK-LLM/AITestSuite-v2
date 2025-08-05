@@ -66,7 +66,7 @@ if st.sidebar.button("🔄 Force Scholar/Social Ingest", key="force_ingest"):
         if os.path.exists(script_path):
             subprocess.run([sys.executable, script_path])
     st.sidebar.success("Ingestion complete! Refreshing dashboard...")
-    st.experimental_rerun()
+    st.rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.caption("All feeds are auto-processed. Panel updates after each ingestion or mutation run.")
