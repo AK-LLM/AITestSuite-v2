@@ -77,7 +77,7 @@ if st.sidebar.button("🔄 Force Scholar/Social Ingest", key="force_ingest"):
 
 st.sidebar.markdown("---")
 # === Supabase Sync Button in Sidebar ===
-if st.sidebar.button("🛡️ Supabase Sync Test", key="supabase_sync"):
+if st.sidebar.button("🛡️ Supabase Sync", key="supabase_sync"):
     with st.spinner("Syncing plugins to Supabase..."):
         try:
             msg = sync_plugins_with_supabase()
