@@ -23,3 +23,5 @@ networkx
 # ml-privacy-meter  <-- REMOVED until later
 pyvis
 joblib
+beautifulsoup4
+lxml
