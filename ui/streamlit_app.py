@@ -20,6 +20,58 @@ SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
 PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
 PAYLOAD_FOLDER = os.path.join(PROJECT_ROOT, "payloads")
 POLYGLOT_FOLDER = os.path.join(PROJECT_ROOT, "polyglot_chains")
+LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
+
+# === Intelligence Feed Status Dashboard (NEW) ===
+def safe_load(path):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+GENEPOOL_PATH = os.path.join(LOGS_DIR, "genepool.json")
+PAPERS_DB = os.path.join(LOGS_DIR, "papers_ingested.json")
+TEST_QUEUE = os.path.join(LOGS_DIR, "sandbox_tests.json")
+DISCORD_OUT = os.path.join(LOGS_DIR, "discord_messages.json")
+SLACK_OUT = os.path.join(LOGS_DIR, "slack_messages.json")
+
+st.sidebar.subheader("📖 Intelligence Feed Status")
+
+papers = safe_load(PAPERS_DB)
+verified_claims = [c for c in safe_load(GENEPOOL_PATH) if c.get("scenario") or c.get("name")]
+sandboxed = safe_load(TEST_QUEUE)
+discord_msgs = safe_load(DISCORD_OUT)
+slack_msgs = safe_load(SLACK_OUT)
+
+st.sidebar.markdown(f"**Last Papers Ingested:** {len(papers)}")
+st.sidebar.markdown(f"**Verified Claims/Scenarios:** {len(verified_claims)}")
+st.sidebar.markdown(f"**Sandboxed Claims:** {len(sandboxed)}")
+st.sidebar.markdown(f"**Discord Threats Fetched:** {len(discord_msgs)}")
+st.sidebar.markdown(f"**Slack Threats Fetched:** {len(slack_msgs)}")
+
+if len(sandboxed) > 0:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("⚠️ **Review Needed:**")
+    for c in sandboxed[:5]:
+        st.sidebar.markdown(f"- {c.get('claim', c.get('name', str(c)[:64]))}")
+
+if st.sidebar.button("🔄 Force Scholar/Social Ingest", key="force_ingest"):
+    # Run all intelligence/scraping scripts (robust, safe if not present)
+    for script_path in [
+        os.path.join(PROJECT_ROOT, "core", "auto_ingest_scholar.py"),
+        os.path.join(PROJECT_ROOT, "core", "scraper_discord.py"),
+        os.path.join(PROJECT_ROOT, "core", "scraper_slack.py"),
+    ]:
+        if os.path.exists(script_path):
+            subprocess.run([sys.executable, script_path])
+    st.sidebar.success("Ingestion complete! Refreshing dashboard...")
+    st.experimental_rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.caption("All feeds are auto-processed. Panel updates after each ingestion or mutation run.")
+
+# === End Intelligence Feed Dashboard ===
 
 # --- UI CONFIG ---
 st.set_page_config(page_title="AI Test Suite v2 (Max)", layout="wide")
