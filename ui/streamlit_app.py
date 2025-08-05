@@ -15,9 +15,6 @@ from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
 from core import fitness_campaign
 
-# --- Import the plugin sync utility ---
-from core.db_sync_plugins import sync_plugins_with_supabase
-
 # === (NEW) Supabase Config ===
 SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jpbuvxexmuzfsetslzon.supabase.co"
 SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwYnV2eGV4bXV6ZnNldHNsem9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjUzNjAsImV4cCI6MjA2OTk0MTM2MH0.ZDG3Hls_I5EUJw3kXYbp8g7ft-k1icYoh3W1rNDvpHw"
@@ -80,10 +77,15 @@ st.sidebar.markdown("---")
 if st.sidebar.button("🛡️ Supabase Sync", key="supabase_sync"):
     with st.spinner("Syncing plugins to Supabase..."):
         try:
-            msg = sync_plugins_with_supabase()
-            st.sidebar.success(msg)
+            # Import inside the function to avoid circular imports!
+            from core.db_sync_plugins import sync_plugins_with_supabase
+            num_synced, error = sync_plugins_with_supabase()
+            if error:
+                st.sidebar.error(f"Supabase Sync failed: {error}")
+            else:
+                st.sidebar.success(f"Supabase Sync complete: {num_synced} plugins synced.")
         except Exception as e:
-            st.sidebar.error(f"Supabase sync failed: {e}")
+            st.sidebar.error(f"Supabase Sync failed: {e}")
 
 st.sidebar.caption("All feeds are auto-processed. Panel updates after each ingestion or mutation run.")
 
