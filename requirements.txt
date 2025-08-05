@@ -31,3 +31,4 @@ slack_sdk
 discord.py
 selenium
 transformers
+supabase
