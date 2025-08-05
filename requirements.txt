@@ -27,3 +27,7 @@ beautifulsoup4
 lxml
 spacy
 openai
+slack_sdk
+discord.py
+selenium
+transformers
