@@ -15,6 +15,31 @@ from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
 from core import fitness_campaign
 
+# === (NEW) Supabase Sync Test Setup ===
+SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jpbuvxexmuzfsetslzon.supabase.co"
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwYnV2eGV4bXV6ZnNldHNsem9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjUzNjAsImV4cCI6MjA2OTk0MTM2MH0.ZDG3Hls_I5EUJw3kXYbp8g7ft-k1icYoh3W1rNDvpHw"
+
+try:
+    from supabase import create_client
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    supabase = None
+
+def supabase_sync_check():
+    if not supabase:
+        st.error("Supabase client not configured. Install supabase-py and set keys.")
+        return
+    try:
+        st.info("Checking Supabase connection...")
+        # Change 'plugins' to any table you have, or test with another table
+        res = supabase.table("plugins").select("*").limit(1).execute()
+        if hasattr(res, 'data') and res.data:
+            st.success("Supabase connected! Plugin sample: " + str(res.data))
+        else:
+            st.warning("Connected but 'plugins' table is empty or not accessible.")
+    except Exception as e:
+        st.error(f"Supabase error: {e}")
+
 # --- FOLDER CONFIG ---
 SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
 PLUGIN_FOLDER = os.path.join(PROJECT_ROOT, "plugins")
@@ -69,6 +94,10 @@ if st.sidebar.button("🔄 Force Scholar/Social Ingest", key="force_ingest"):
     st.rerun()
 
 st.sidebar.markdown("---")
+# === Supabase Sync Button in Sidebar ===
+if st.sidebar.button("🛡️ Supabase Sync Test", key="supabase_sync"):
+    supabase_sync_check()
+
 st.sidebar.caption("All feeds are auto-processed. Panel updates after each ingestion or mutation run.")
 
 # === End Intelligence Feed Dashboard ===
