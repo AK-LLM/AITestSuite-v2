@@ -1,13 +1,14 @@
 import os
 import json
 
-def sync_plugins_with_supabase():
+def sync_plugins_with_supabase(verbose=False):
     """
     Sync all plugin metadata from the plugins folder into the Supabase 'plugins' table.
     Returns: (num_synced, error_message)
     """
     SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jpbuvxexmuzfsetslzon.supabase.co"
     SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwYnV2eGV4bXV6ZnNldHNsem9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjUzNjAsImV4cCI6MjA2OTk0MTM2MH0.ZDG3Hls_I5EUJw3kXYbp8g7ft-k1icYoh3W1rNDvpHw"
+
     try:
         from supabase import create_client
     except Exception as e:
@@ -38,7 +39,9 @@ def sync_plugins_with_supabase():
                         plugins_to_sync.append(js)
                     elif isinstance(js, list):
                         plugins_to_sync.extend(js)
-            except Exception:
+            except Exception as e:
+                if verbose:
+                    print(f"Skipped {fname}: {e}")
                 continue  # skip malformed JSON
         elif fname.endswith(".py"):
             plugins_to_sync.append({
@@ -51,12 +54,15 @@ def sync_plugins_with_supabase():
     for plugin in plugins_to_sync:
         plugin_clean = {k: v for k, v in plugin.items() if not callable(v)}
         try:
+            # upsert by 'name' (change this if your PK is different)
             supabase.table("plugins").upsert(plugin_clean, on_conflict="name").execute()
             count += 1
         except Exception as e:
+            if verbose:
+                print(f"Failed to upsert plugin {plugin.get('name')}: {e}")
             failed += 1
 
-    if count == 0:
+    if count == 0 and failed == 0:
         return 0, "No plugins synced. (Check plugin folder and Supabase schema!)"
     if failed > 0:
         return count, f"Partial success: {count} plugins synced, {failed} failed."
