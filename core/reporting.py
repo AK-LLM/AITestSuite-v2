@@ -1,10 +1,8 @@
-import json
-import io
 import os
+import io
 import pandas as pd
 from collections import Counter
 from reportlab.lib.pagesizes import landscape, letter
-from reportlab.pdfgen import canvas
 from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
                                 Paragraph, Spacer, Image, PageBreak)
 from reportlab.lib import colors
@@ -12,6 +10,13 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import matplotlib.pyplot as plt
 
 from core.attack_graph import build_attack_graph, visualize_attack_graph
+
+# Try to import Supabase functions, fallback to local data if not available
+try:
+    from core.supabase_db import get_results
+    SUPABASE_ENABLED = True
+except ImportError:
+    SUPABASE_ENABLED = False
 
 def plot_risk_chart(risk_counts):
     fig, ax = plt.subplots(figsize=(3,3))
@@ -36,22 +41,40 @@ def ensure_fields(row):
         row["references"] = "https://llm-attacks.org, https://owasp.org/www-project-top-ten/"
     return row
 
-def generate_report(results, filetype="pdf"):
-    df = pd.DataFrame(results)
-    required = ["name","description","category","risk","risk_score","success","details","remediation","references","scenario"]
+def get_results_data(results=None):
+    """Central place to fetch results from Supabase or use passed-in results."""
+    if results is not None and isinstance(results, list) and len(results) > 0:
+        return results
+    if SUPABASE_ENABLED:
+        dbres = get_results(limit=1000)
+        if dbres is not None and isinstance(dbres, list) and len(dbres) > 0:
+            return dbres
+    return []  # fallback to empty
+
+def generate_report(results=None, filetype="pdf"):
+    """
+    If `results` is None, try to load from Supabase.
+    If `results` is a list, use it directly.
+    """
+    results_data = get_results_data(results)
+    if not results_data:
+        # If still no results, show empty report
+        df = pd.DataFrame([{"name": "", "description": "", "category": "", "risk": "", "risk_score": "",
+                            "success": False, "details": "", "remediation": "", "references": "", "scenario": ""}])
+    else:
+        df = pd.DataFrame(results_data)
+    required = ["name", "description", "category", "risk", "risk_score", "success", "details", "remediation", "references", "scenario"]
     for col in required:
         if col not in df.columns:
             df[col] = ""
 
-    # Guarantee fields for every row
     df = df.apply(ensure_fields, axis=1)
-
     risk_counts = dict(Counter(df["risk"]))
     cat_counts = dict(Counter(df["category"]))
     plugin_counts = dict(Counter(df["name"]))
     success_rate = (df["success"]==True).sum() / len(df) if len(df)>0 else 0
 
-    if filetype=="json":
+    if filetype == "json":
         return df.to_json(orient="records", indent=2)
 
     # --- PDF output ---
@@ -69,6 +92,7 @@ def generate_report(results, filetype="pdf"):
     elements.append(Paragraph("<b>Category Breakdown:</b> "+", ".join(f"{k}: {v}" for k,v in cat_counts.items()), styles["Normal"]))
     elements.append(Paragraph("<b>Plugins Used:</b> "+", ".join(f"{k}: {v}" for k,v in plugin_counts.items()), styles["Normal"]))
     elements.append(Spacer(1, 8))
+
     # Risk chart
     try:
         if risk_counts:
@@ -80,7 +104,7 @@ def generate_report(results, filetype="pdf"):
 
     # --- Attack graph static image (PNG) ---
     try:
-        G = build_attack_graph(results)
+        G = build_attack_graph(results_data)
         html_path, png_path = visualize_attack_graph(G, output_html="attack_graph.html", image_out="attack_graph.png")
         if png_path and os.path.exists(png_path):
             elements.append(Paragraph("Attack Graph: AI Attack Relationships", styles["Heading4"]))
@@ -88,7 +112,7 @@ def generate_report(results, filetype="pdf"):
             elements.append(Spacer(1, 5))
             elements.append(Paragraph("For interactive exploration, open attack_graph.html in a browser.", styles["Normal"]))
         else:
-            elements.append(Paragraph("<font color='red'>Attack graph image missing or failed.</font>", styles="Normal"))
+            elements.append(Paragraph("<font color='red'>Attack graph image missing or failed.</font>", styles["Normal"]))
     except Exception as e:
         elements.append(Paragraph(f"<font color='red'>Attack graph error: {e}</font>", styles["Normal"]))
 
@@ -99,6 +123,7 @@ def generate_report(results, filetype="pdf"):
         "Red = worse than benchmark. Green = better or no finding.",
         styles["Normal"]))
     elements.append(Spacer(1, 8))
+
     # --- Main Table: Truncate long text, wrap as Paragraph ---
     table_data = [
         ["Plugin", "Scenario", "Risk", "Category", "Success", "Details", "Remediation", "References"]
@@ -107,8 +132,6 @@ def generate_report(results, filetype="pdf"):
         refs = row["references"]
         if isinstance(refs, list): refs = ", ".join(refs)
         elif refs is None: refs = ""
-        risk_color = "#f4cccc" if str(row["risk"]).lower() in ["high","critical"] else "#fff"
-        # Wrap/truncate long fields
         details_short = (str(row["details"])[:120] + " ...") if len(str(row["details"]))>120 else str(row["details"])
         remediation_short = (str(row.get("remediation",""))[:80] + " ...") if len(str(row.get("remediation","")))>80 else str(row.get("remediation",""))
         refs_short = (str(refs)[:60] + " ...") if len(str(refs))>60 else str(refs)
@@ -137,6 +160,7 @@ def generate_report(results, filetype="pdf"):
     ]))
     elements.append(tbl)
     elements.append(PageBreak())
+
     # --- Appendix: Full plugin details (untruncated) ---
     elements.append(Paragraph("APPENDIX: Full Details Per Test", styles["Heading3"]))
     for _, row in df.iterrows():
