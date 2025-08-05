@@ -15,18 +15,12 @@ from core.scenario_loader import load_scenarios
 from core.reporting import generate_report
 from core import fitness_campaign
 
-# === (NEW) Supabase Sync Button Setup ===
-def run_supabase_sync():
-    # Import and run the sync script in-process (recommended for Streamlit)
-    try:
-        from core.db_sync_plugins import sync_plugins_to_supabase
-        num_synced, error = sync_plugins_to_supabase()
-        if error:
-            st.error(f"Supabase Sync Error: {error}")
-        else:
-            st.success(f"Supabase Sync Complete: {num_synced} plugins synced.")
-    except Exception as e:
-        st.error(f"Supabase Sync failed: {e}")
+# --- Import the plugin sync utility ---
+from core.db_sync_plugins import sync_plugins_with_supabase
+
+# === (NEW) Supabase Config ===
+SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jpbuvxexmuzfsetslzon.supabase.co"
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwYnV2eGV4bXV6ZnNldHNsem9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjUzNjAsImV4cCI6MjA2OTk0MTM2MH0.ZDG3Hls_I5EUJw3kXYbp8g7ft-k1icYoh3W1rNDvpHw"
 
 # --- FOLDER CONFIG ---
 SCENARIO_FOLDER = os.path.join(PROJECT_ROOT, "scenarios")
@@ -84,7 +78,12 @@ if st.sidebar.button("🔄 Force Scholar/Social Ingest", key="force_ingest"):
 st.sidebar.markdown("---")
 # === Supabase Sync Button in Sidebar ===
 if st.sidebar.button("🛡️ Supabase Sync", key="supabase_sync"):
-    run_supabase_sync()
+    with st.spinner("Syncing plugins to Supabase..."):
+        try:
+            msg = sync_plugins_with_supabase()
+            st.sidebar.success(msg)
+        except Exception as e:
+            st.sidebar.error(f"Supabase sync failed: {e}")
 
 st.sidebar.caption("All feeds are auto-processed. Panel updates after each ingestion or mutation run.")
 
