@@ -1,14 +1,13 @@
 import os
 import json
 
-def sync_plugins_with_supabase(verbose=False):
+def sync_plugins_with_supabase():
     """
     Sync all plugin metadata from the plugins folder into the Supabase 'plugins' table.
     Returns: (num_synced, error_message)
     """
     SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jpbuvxexmuzfsetslzon.supabase.co"
     SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwYnV2eGV4bXV6ZnNldHNsem9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjUzNjAsImV4cCI6MjA2OTk0MTM2MH0.ZDG3Hls_I5EUJw3kXYbp8g7ft-k1icYoh3W1rNDvpHw"
-
     try:
         from supabase import create_client
     except Exception as e:
@@ -40,8 +39,7 @@ def sync_plugins_with_supabase(verbose=False):
                     elif isinstance(js, list):
                         plugins_to_sync.extend(js)
             except Exception as e:
-                if verbose:
-                    print(f"Skipped {fname}: {e}")
+                print(f"[SYNC][SKIP] Malformed JSON in {fname}: {e}")
                 continue  # skip malformed JSON
         elif fname.endswith(".py"):
             plugins_to_sync.append({
@@ -51,19 +49,22 @@ def sync_plugins_with_supabase(verbose=False):
             })
 
     count, failed = 0, 0
+    error_msgs = []
     for plugin in plugins_to_sync:
         plugin_clean = {k: v for k, v in plugin.items() if not callable(v)}
         try:
-            # upsert by 'name' (change this if your PK is different)
+            print(f"[SYNC][UPSERT] Attempting: {plugin_clean}")  # DEBUG LOGGING
+            # You may need to adjust the 'on_conflict' field based on your table's constraints!
             supabase.table("plugins").upsert(plugin_clean, on_conflict="name").execute()
             count += 1
         except Exception as e:
-            if verbose:
-                print(f"Failed to upsert plugin {plugin.get('name')}: {e}")
+            print(f"[SYNC][FAILED] {plugin_clean} => {e}")
+            error_msgs.append(f"FAILED: {plugin_clean.get('name', str(plugin_clean)[:60])} => {e}")
             failed += 1
 
-    if count == 0 and failed == 0:
-        return 0, "No plugins synced. (Check plugin folder and Supabase schema!)"
+    # Collate error messages if needed
+    if count == 0:
+        return 0, f"No plugins synced. ({failed} failed)\n" + "\n".join(error_msgs[:5])
     if failed > 0:
-        return count, f"Partial success: {count} plugins synced, {failed} failed."
+        return count, f"Partial success: {count} plugins synced, {failed} failed.\n" + "\n".join(error_msgs[:5])
     return count, None
