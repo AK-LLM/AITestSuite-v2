@@ -1,4 +1,4 @@
-name: AI Suite AutoTest
+#name: AI Suite AutoTest
 
 #on:
 #  push:
@@ -14,39 +14,39 @@ name: AI Suite AutoTest
 #    runs-on: ubuntu-latest
 #    timeout-minutes: 120
 
-    steps:
-      - uses: actions/checkout@v3
+#    steps:
+#      - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+#      - name: Set up Python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt || pip install openai requests pyyaml anthropic
+#      - name: Install dependencies
+#        run: |
+#          pip install -r requirements.txt || pip install openai requests pyyaml anthropic
 
-      - name: Run Wild Exploit Ingest
-        run: python wild_exploit_ingest.py || true
+#      - name: Run Wild Exploit Ingest
+#       run: python wild_exploit_ingest.py || true
 
-      - name: Run Polyglot Smoke Tests
-        run: python polyglot_chains/polyglot_smoke_test.py || true
+#      - name: Run Polyglot Smoke Tests
+#        run: python polyglot_chains/polyglot_smoke_test.py || true
 
-      - name: Run Fuzzer
-        run: |
-          cd fuzzer
-          python prompt_fuzzer.py
+#      - name: Run Fuzzer
+#        run: |
+#          cd fuzzer
+#          python prompt_fuzzer.py
 
-      - name: Run Agent Swarm
-        run: |
-          cd agent_worms
-          python multiapi_swarm_runner.py
+#      - name: Run Agent Swarm
+#        run: |
+#          cd agent_worms
+#          python multiapi_swarm_runner.py
 
-      - name: Upload Logs/Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-suite-logs
-          path: |
-            staging/fuzz_logs/
-            staging/
-            agent_worms/
+#      - name: Upload Logs/Artifacts
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: ai-suite-logs
+#          path: |
+#            staging/fuzz_logs/
+#            staging/
+#            agent_worms/
