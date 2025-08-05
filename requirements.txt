@@ -25,3 +25,5 @@ pyvis
 joblib
 beautifulsoup4
 lxml
+spacy
+openai
